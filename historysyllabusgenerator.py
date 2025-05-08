@@ -202,8 +202,8 @@ class HistorySyllabusGenerator:
         try:
             # Create and initialize a test template
             test_template = SyllabusTemplate(
-                course_code="HIS101",
-                title="Introduction to History",
+                course_code="TEST1000",
+                title="TEST TEMPLATE",
                 description="This is a test template for the History Syllabus Generator.",
                 objectives=[
                     "Understand the principles of historical research.",
