@@ -1143,7 +1143,7 @@ class HistorySyllabusGenerator:
             frame.destroy()
             self.ta_entries.remove(entries)
             
-        remove_btn = ttk.Button(frame, text="×", 
+        remove_btn = ttk.Button(frame, text="X", 
                               command=remove_ta,
                               style="Delete.TButton")
         remove_btn.pack(side=tk.LEFT, padx=2)
@@ -1203,7 +1203,7 @@ class HistorySyllabusGenerator:
             self.repack_schedule_entries()
         
         # Delete button
-        delete_btn = ttk.Button(self.entries_frame, text="×", command=remove_entry, style="Delete.TButton")
+        delete_btn = ttk.Button(self.entries_frame, text="X", command=remove_entry, style="Delete.TButton")
         delete_btn.grid(row=row, column=4, padx=(0, 5), pady=2)
         
         entry_dict = {
@@ -1574,7 +1574,7 @@ class HistorySyllabusGenerator:
             assignment_frame.destroy()
             category["assignments"].remove(assignment_dict)
         
-        remove_btn = ttk.Button(assignment_frame, text="×", 
+        remove_btn = ttk.Button(assignment_frame, text="X", 
                               command=remove_assignment,
                               style="Delete.TButton")
         remove_btn.pack(side=tk.LEFT, padx=2)
@@ -3328,7 +3328,7 @@ class HistorySyllabusGenerator:
             self.update_outcomes_references()  # Update the references after removing
             self.update_lo_preview()
         
-        remove_btn = ttk.Button(frame, text="×", 
+        remove_btn = ttk.Button(frame, text="X", 
                               command=remove_outcome,
                               style="Delete.TButton")
         remove_btn.pack(side=tk.LEFT, padx=5)
@@ -3378,8 +3378,12 @@ class HistorySyllabusGenerator:
         style.configure("Heading.TLabel", font=("Arial", 12, "bold"))
         style.configure("Action.TButton", foreground="black", background="#0078D7", font=("Arial", 10, "bold"))
         style.map("Action.TButton", background=[("active", "#005A9E")])
-        style.configure("Delete.TButton", foreground="white", background="#D9534F", font=("Arial", 10, "bold"))
+        
+        # Improve delete button appearance - changed foreground to black for better visibility
+        style.configure("Delete.TButton", foreground="black", background="#D9534F", font=("Arial", 10, "bold"), 
+                       padding=3, width=3)
         style.map("Delete.TButton", background=[("active", "#C9302C")])
+        
         style.configure("Small.TButton", font=("Arial", 8))
         
         # Preview styles
@@ -3463,7 +3467,7 @@ class HistorySyllabusGenerator:
             self.renumber_objectives()
             self.update_document_preview()
         
-        remove_btn = ttk.Button(frame, text="×", command=remove_objective, style="Delete.TButton")
+        remove_btn = ttk.Button(frame, text="X", command=remove_objective, style="Delete.TButton")
         remove_btn.pack(side=tk.LEFT, padx=5)
         
         obj_dict = {"frame": frame, "number": number_label, "entry": entry}
