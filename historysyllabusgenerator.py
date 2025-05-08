@@ -206,9 +206,9 @@ class HistorySyllabusGenerator:
                 title="Introduction to History",
                 description="This is a test template for the History Syllabus Generator.",
                 objectives=[
-                    "Understand the principles of *historical research*.",
-                    "**Develop critical thinking skills** through analysis of primary sources.",
-                    "Learn to construct [historical arguments](http://example.com) based on evidence."
+                    "Understand the principles of historical research.",
+                    "Develop critical thinking skills through analysis of primary sources.",
+                    "Learn to construct historical arguments based on evidence."
                 ],
                 outcomes=[
                     "Demonstrate ability to analyze primary sources.",
@@ -1368,7 +1368,7 @@ class HistorySyllabusGenerator:
             # Materials and Fee
             if hasattr(self, 'materials_text'):
                 self.materials_text.delete('1.0', tk.END)
-                self.materials_text.insert('1.0', "Required textbook and materials will be listed here.")
+                self.materials_text.insert('1.0', "**Required** textbook *and* materials will be *listed* here.")
                 
             if hasattr(self, 'fee_entry'):
                 self.fee_entry.delete(0, tk.END)
