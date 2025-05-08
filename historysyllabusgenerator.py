@@ -1935,6 +1935,29 @@ class HistorySyllabusGenerator:
         try:
             doc = Document()
             
+            # Add page numbers in the footer
+            section = doc.sections[0]
+            footer = section.footer
+            paragraph = footer.paragraphs[0]
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            paragraph.text = "Page "
+            
+            # Add a field for the page number
+            run = paragraph.add_run()
+            fldChar1 = OxmlElement('w:fldChar')
+            fldChar1.set(qn('w:fldCharType'), 'begin')
+            run._element.append(fldChar1)
+            
+            instrText = OxmlElement('w:instrText')
+            instrText.set(qn('xml:space'), 'preserve')
+            instrText.text = "PAGE"
+            run._element.append(instrText)
+            
+            fldChar2 = OxmlElement('w:fldChar')
+            fldChar2.set(qn('w:fldCharType'), 'end')
+            run._element.append(fldChar2)
+            
+            # Continue with the rest of the document creation code
             # Title and Course Info (centered)
             title = doc.add_heading(f"{self.entry_course_num.get()}: {self.entry_course_title.get()}", level=0)
             title.alignment = WD_ALIGN_PARAGRAPH.CENTER
