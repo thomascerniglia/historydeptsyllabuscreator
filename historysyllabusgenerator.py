@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog, simpledialog
 from tkinter import scrolledtext
 from docx import Document
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 from docx.shared import Inches, Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_ALIGN_VERTICAL
@@ -17,13 +19,24 @@ import json
 import os
 from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 import pickle
 import sys
 import re
 import tempfile
 import docx
-from docx2pdf import convert
-
+try:
+    # Import the convert function from docx2pdf
+    from docx2pdf import convert
+    
+except ImportError:
+    # Handle case when docx2pdf is not installed
+    messagebox.showwarning("Missing Library", "The docx2pdf library is not installed. PDF export will not work.")
+    # Define a dummy function to prevent errors
+    def convert(input_path, output_path):
+        raise RuntimeError("docx2pdf library is not installed. Cannot convert to PDF.")
+    
 # Default template text for various sections
 course_description_default = ""
 prerequisites_default = "None"
@@ -1555,369 +1568,98 @@ class HistorySyllabusGenerator:
             bottomMargin=36
         )
         
+        # Calculate available width for content
+        available_width = letter[0] - 72  # 72 points = 1 inch (36pt margin on each side)
+        
         styles = getSampleStyleSheet()
         story = []
-        
-        # Custom styles
-        styles.add(ParagraphStyle(
-            name='CustomTitle',
-            parent=styles['Heading1'],
-            fontSize=16,
-            spaceAfter=10,
-            alignment=1  # Center alignment
-        ))
-        
-        styles.add(ParagraphStyle(
-            name='CustomHeading1',
-            parent=styles['Heading1'],
-            fontSize=14,
-            spaceAfter=8
-        ))
-        
-        styles.add(ParagraphStyle(
-            name='CustomHeading2',
-            parent=styles['Heading2'],
-            fontSize=12,
-            spaceAfter=6
-        ))
-        
-        styles.add(ParagraphStyle(
-            name='CustomBody',
-            parent=styles['Normal'],
-            fontSize=10,
-            spaceAfter=5
-        ))
-        
-        styles.add(ParagraphStyle(
-            name='CustomIndent',
-            parent=styles['Normal'],
-            fontSize=10,
-            spaceAfter=5,
-            leftIndent=20
-        ))
-        
-        # Title and course info
-        title = f"{self.entry_course_num.get()}: {self.entry_course_title.get()}"
-        story.append(Paragraph(title, styles['CustomTitle']))
-        
-        # Term and credits
-        term_line = f"{self.entry_term.get()} ({self.entry_credits.get()} credits)"
-        story.append(Paragraph(term_line, styles['CustomTitle']))
-        
-        # I. General Information
-        story.append(Paragraph("I. General Information", styles['CustomHeading1']))
-        story.append(Paragraph(f"<b>Meeting days and times:</b> {self.entry_meeting_times.get()}", styles['CustomBody']))
-        story.append(Paragraph(f"<b>Class location:</b> {self.entry_location.get()}", styles['CustomBody']))
-        
-        # Instructor Information
-        story.append(Paragraph("<b>Instructor:</b>", styles['CustomBody']))
-        instructor_info = [
-            ("Name:", self.entry_instr_name.get()),
-            ("Office:", self.entry_instr_office.get()),
-            ("Phone:", self.entry_instr_phone.get()),
-            ("Email:", self.entry_instr_email.get()),
-            ("Office Hours:", self.entry_instr_office_hours.get())
-        ]
-        for label, value in instructor_info:
-            story.append(Paragraph(f"<b>{label}</b> {value}", styles['CustomIndent']))
-        
-        # Teaching Assistants
-        if self.ta_entries:
-            story.append(Paragraph("<b>Teaching Assistants:</b>", styles['CustomBody']))
-            for ta in self.ta_entries:
-                story.append(Paragraph(f"<b>Name:</b> {ta[0].get()}", styles['CustomIndent']))
-                story.append(Paragraph(f"<b>Email:</b> {ta[1].get()}", styles['CustomIndent']))
-                story.append(Paragraph(f"<b>Office Hours:</b> {ta[2].get()}", styles['CustomIndent']))
-        
-        # Course Description
-        story.append(Paragraph("Course Description", styles['CustomHeading1']))
-        story.append(Paragraph(self.txt_description.get("1.0", tk.END).strip(), styles['CustomBody']))
-        
-        # Prerequisites
-        story.append(Paragraph("Prerequisites", styles['CustomHeading1']))
-        prerequisites = self.entry_prerequisites.get().strip() if hasattr(self, 'entry_prerequisites') else "None"
-        story.append(Paragraph(prerequisites or "None", styles['CustomBody']))
-        
-        # Insert Gen Ed section if enabled
-        if self.show_gen_ed.get():
-            story.append(Paragraph("General Education Designation: Social and Behavioral Sciences (S)", styles['CustomHeading1']))
-            story.append(Paragraph(
-                "Social Science courses must afford students an understanding of the basic social and behavioral science concepts and principles used in the analysis of behavior and past and present social, political, and economic issues. Social and Behavioral Sciences (S) is a sub-designation of Social Sciences at the University of Florida. These courses provide instruction in the history, key themes, principles, terminology, and underlying theory or methodologies used in the social and behavioral sciences. Students will learn to identify, describe and explain social institutions, structures or processes. These courses emphasize the effective application of accepted problem-solving techniques. Students will apply formal and informal qualitative or quantitative analysis to examine the processes and means by which individuals make personal and group decisions, as well as the evaluation of opinions, outcomes or human behavior. Students are expected to assess and analyze ethical perspectives in individual and societal decisions.",
-                styles['CustomBody']
-            ))
-        
-        # II. Student Learning Outcomes
-        story.append(Paragraph("II. Student Learning Outcomes", styles['CustomHeading1']))
-        story.append(Paragraph("A student who successfully completes this course will:", styles['CustomBody']))
-        
-        if hasattr(self, 'outcome_entries') and self.outcome_entries:
-            # Use the entries from the new numbered list UI
-            for i, outcome_entry in enumerate(self.outcome_entries, 1):
-                outcome_text = outcome_entry["entry"].get().strip()
-                if outcome_text:
-                    story.append(Paragraph(f"{i}. {outcome_text}", styles['CustomIndent']))
-        else:
-            # Default outcomes if none provided
-            default_outcomes = [
-                "Describe the factual details of the substantive historical episodes under study.",
-                "Identify and analyze foundational developments that shaped history using critical thinking skills.",
-                "Demonstrate an understanding of the primary ideas, values, and perceptions that have shaped history.",
-                "Demonstrate competency in civic literacy."
-            ]
-            for i, outcome in enumerate(default_outcomes, 1):
-                story.append(Paragraph(f"{i}. {outcome}", styles['CustomIndent']))
-        
-        # Add Learning Outcomes table
-        story.append(Paragraph("Objectives—General Education and Social Sciences (S)", styles['CustomBody']))
-        
-        # Create the table data with column headers
-        outcome_data = [
-            ["CATEGORY", "SOCIAL SCIENCE SLOS", "STATE SLO ASSIGNMENTS", "COURSE-SPECIFIC"]
-        ]
-        
-        # Add rows from learning objectives entries if they exist
-        if hasattr(self, 'learning_objectives_entries') and self.learning_objectives_entries:
-            for category, entries in self.learning_objectives_entries.items():
-                # Skip entries that were removed
-                if 'frame' in entries and not entries['frame'].winfo_exists():
-                    continue
-                    
-                # For custom categories, use the name_entry value
-                if 'name_entry' in entries:
-                    category_name = entries['name_entry'].get()
-                else:
-                    category_name = category
-                    
-                slo_text = entries['slo'].get("1.0", tk.END).strip()
-                assignments_text = entries['assignments'].get("1.0", tk.END).strip()
-                course_specific_text = entries['course_specific'].get("1.0", tk.END).strip()
-                
-                outcome_data.append([
-                    category_name,
-                    slo_text,
-                    assignments_text,
-                    course_specific_text
-                ])
-        else:
-            # Fallback to default table if no custom entries exist
-            outcome_data.extend([
-            ["Content", 
-             "Identify, describe, and explain key themes, principles, and terminology; the history, theory and/or methodologies used; and social institutions, structures and processes.", 
-             "Outcomes 1-4\n\nStudents will demonstrate their knowledge of the details of the substantive historical episodes by analyzing primary and secondary sources in short papers, homework assignments, exams, and in-class discussion."],
-            ["Critical Thinking", 
-             "Apply formal and informal qualitative or quantitative analysis effectively to examine the processes and means by which individuals make personal and group decisions. Assess and analyze ethical perspectives in individual and societal decisions.", 
-             "Outcomes 1-4\n\nStudents will demonstrate their ability in applying qualitative and quantitative methods by analyzing primary and secondary sources in short papers, homework assignments, and exams by using critical thinking skills."],
-            ["Communication", 
-             "Communication is the development and expression of ideas in written and oral forms.", 
-             "Outcomes 1-4\n\nStudents will identify and explain key developments that shaped history in written assignments and class discussion.\n\nStudents will demonstrate their understandings of the primary ideas, values, and perceptions that have shaped history and will describe them in written assignments, exams, and class discussion."]
-            ])
-        
-        # Create the table with appropriate column widths
-        outcomes_table = Table(outcome_data, colWidths=[0.9*inch, 2.3*inch, 3.3*inch, 3.3*inch])
-        outcomes_table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 8),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
-            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, -1), 8),
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 4),  # Add padding for better text wrapping
-            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
-        ]))
-        story.append(outcomes_table)
-        
-        # III. Graded Work
-        story.append(Paragraph("III. Graded Work", styles['CustomHeading1']))
-        
-        # Graded Components
-        if hasattr(self, 'category_frames') and self.category_frames:
-            story.append(Paragraph("Graded Components", styles['CustomHeading2']))
-            
-            # Add each category with its assignments
-            for category in self.category_frames:
-                if category["name"].get().strip() and category["weight"].get().strip():
-                    category_name = category["name"].get()
-                    category_weight = category["weight"].get()
-                    category_description = category["description"].get("1.0", tk.END).strip() if "description" in category else ""
-                                
-                    # Category line
-                    category_line = f"{category_name} ({category_weight}%)"
-                    story.append(Paragraph(category_line, styles['CustomBody']))
-                    
-                    # Description if available
-                    if category_description:
-                        story.append(Paragraph(category_description, styles['CustomIndent']))
-                    
-                    # Assignments list
-                    if "assignments" in category and category["assignments"]:
-                        for assignment in category["assignments"]:
-                            if assignment["title"].get().strip():
-                                assignment_title = assignment["title"].get()
-                                assignment_due = assignment["due date"].get().strip()
-                                assignment_points = assignment["points"].get().strip()
-                                assignment_description = assignment["description"].get("1.0", tk.END).strip()
-                                
-                                assignment_line = f"{assignment_title}"
-                                if assignment_due:
-                                    assignment_line += f", Due: {assignment_due}"
-                                if assignment_points:
-                                    assignment_line += f" ({assignment_points} points)"
-                                story.append(Paragraph(assignment_line, styles['CustomIndent']))
-                                # Assignment description if available
-                                if assignment_description:
-                                    story.append(Paragraph(assignment_description, styles['CustomIndent']))
-                        
-        # Total
-        story.append(Paragraph("TOTAL: 100%", styles['CustomBody']))
-        
-        # Grading Scale
-        story.append(Paragraph("Grading Scale", styles['CustomHeading2']))
-        
-        # Create grading scale data
-        grades = [
-            ["Letter Grade", "Number Grade"],
-            ["A", "93-100"],
-            ["A-", "90-92"],
-            ["B+", "87-89"],
-            ["B", "83-86"],
-            ["B-", "80-82"],
-            ["C+", "77-79"],
-            ["C", "73-76"],
-            ["C-", "70-72"],
-            ["D+", "67-69"],
-            ["D", "63-66"],
-            ["D-", "60-62"],
-            ["E", "0-59"]
-        ]
-        
-        # Create the grade table
-        grade_table = Table(grades, colWidths=[1*inch, 1*inch])
-        grade_table.setStyle(TableStyle([
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ]))
-        story.append(grade_table)
-        
-        #UF catalog
-        story.append(Paragraph("See the UF Catalog's \"Grades and Grading Policies\" for information on how UF assigns grade points.", styles['CustomBody']))
-        
-        # Add grade requirement text right after the table
-        story.append(Paragraph("Note: A minimum grade of C is required to earn General Education credit.", styles['CustomBody']))
-     
-        
-        # Instructions for Submitting Written Assignments
-        story.append(Paragraph("Instructions for Submitting Written Assignments", styles['CustomHeading2']))
-        story.append(Paragraph("All written assignments must be submitted as Word documents (.doc or .docx) through the \"Assignments\" portal in Canvas by the specified deadlines. Do NOT send assignments as PDF files.", styles['CustomBody']))
-        story.append(Spacer(1, 12))   # Add some spacing before the next section
-
-        # Extensions and Make-up Exams
-        if hasattr(self, 'extensions_policy_var') and self.extensions_policy_var.get():
-            story.append(Paragraph("Extensions & Make-Up Exams", styles['CustomHeading2']))
-            story.append(Paragraph("Only the professor can authorize an extension or make-up exam, and all requests must be supported by documentation from a medical provider, Student Health Services, the Disability Resource Center, or the Dean of Students Office. Requirements for attendance and make-up exams, assignments, and other work in this course are consistent with university policies: https://catalog.ufl.edu/ugrad/current/regulations/info/attendance.aspx", styles['CustomBody']))
-        
-        # IV. Evaluations
-        story.append(Paragraph("IV. Evaluations", styles['CustomHeading1']))
-        
-        # UF course evaluation process
-        story.append(Paragraph("UF course evaluation process", styles['CustomBody']))
-        story.append(Paragraph(evaluations_default, styles['CustomBody']))
-        
-        # V. University Policies and Resources
-        story.append(Paragraph("V. University Policies and Resources", styles['CustomHeading1']))
-        
-        # University Assessment Policies (if checked)
-        if hasattr(self, 'assessment_policy_var') and self.assessment_policy_var.get():
-            story.append(Paragraph("University Assessment Policies", styles['CustomHeading2']))
-            story.append(Paragraph("Requirements for make-up exams, assignments, and other work in this course are consistent with university policies that can be found in the Catalog.", styles['CustomBody']))
-        
-        # Students requiring accommodation
-        story.append(Paragraph("Students requiring accommodation", styles['CustomHeading2']))
-        story.append(Paragraph(accommodations_default, styles['CustomBody']))
-        
-        # University Honesty Policy
-        story.append(Paragraph("University Honesty Policy", styles['CustomHeading2']))
-        story.append(Paragraph(honesty_plagiarism_default, styles['CustomBody']))
-        
-        # Plagiarism and Related Ethical Violations
-        story.append(Paragraph("Plagiarism and Related Ethical Violations", styles['CustomHeading2']))
-        story.append(Paragraph("Ethical violations such as plagiarism, cheating, academic misconduct (e.g. passing off others' work as your own, reusing old assignments, etc.) will not be tolerated and will result in a failing grade in this course. Students must be especially wary of plagiarism. The UF Student Honor Code defines plagiarism as follows: \"A student shall not represent as the student's own work all or any portion of the work of another. Plagiarism includes (but is not limited to): a. Quoting oral or written materials, whether published or unpublished, without proper attribution. b. Submitting a document or assignment which in whole or in part is identical or substantially identical to a document or assignment not authored by the student.\" We will go over this in greater detail prior to the first written assignment. Students are encouraged to reach out with any additional questions regarding what constitutes plagiarism. Note that plagiarism also includes the use of any artificial intelligence programs, such as ChatGPT.", styles['CustomBody']))
-        
-        # In-class recording
-        story.append(Paragraph("In-class recording", styles['CustomHeading2']))
-        story.append(Paragraph(recording_policy_default, styles['CustomBody']))
-        
-        # Conflict resolution
-        if content["optional_policies"].get("conflict_resolution", False):
-            story.append(Paragraph("Procedure for conflict resolution", styles['CustomHeading2']))
-            story.append(Paragraph(conflict_resolution_default, styles['CustomBody']))
-        
-        # Campus Resources (if checked)
-        if content["optional_policies"].get("campus_resources", True): # Check the gathered content
-            story.append(Paragraph("Campus Resources", styles['CustomHeading2']))
-            # Split the default text into paragraphs for better PDF formatting
-            for line in campus_resources_default.split('\n\n'):
-                story.append(Paragraph(line.strip(), styles['CustomBody']))
-
-        # Academic Resources (if checked)
-        if content["optional_policies"].get("academic_resources", True): # Check the gathered content
-            story.append(Paragraph("Academic Resources", styles['CustomHeading2']))
-            # Split the default text into paragraphs for better PDF formatting
-            for line in academic_resources_default.split('\n\n'):
-                story.append(Paragraph(line.strip(), styles['CustomBody']))
-        
+    
         # VI. Course Schedule
         story.append(Paragraph("VI. Calendar", styles['CustomHeading1']))
         
-        # Create schedule table
+        # Create schedule table with preprocessed data
         schedule_data = [["Date", "Topic", "Readings/Preparation", "Work Due"]]
         
+        # Process the schedule entries first to better handle text wrapping
+        processed_schedule_data = []
         for entry in self.schedule_entries:
-            schedule_data.append([
-                entry['date'].get(),
-                entry['topic'].get(),
-                entry['readings'].get("1.0", tk.END).strip(),
-                entry['work_due'].get()
-            ])
+            date = entry['date'].get()
+            topic = entry['topic'].get()
+            readings = entry['readings'].get("1.0", tk.END).strip()
+            work_due = entry['work_due'].get()
+            
+            # Insert intelligent line breaks for better text wrapping in readings column
+            if len(readings) > 80:  # If content is long
+                # Add line breaks at natural points
+                readings = readings.replace(". ", ".\n")
+                readings = readings.replace("; ", ";\n")
+                readings = readings.replace("] ", "]\n")
+                readings = readings.replace("words)", "words)\n")
+            
+            # Insert breaks for topic if needed
+            if len(topic) > 20:
+                topic = topic.replace("; ", ";\n")
+                topic = topic.replace(": ", ":\n")
+            
+            processed_schedule_data.append([date, topic, readings, work_due])
         
-        # Create schedule table with standardized formatting
-        schedule_table = Table(schedule_data, colWidths=[0.8*inch, 1.4*inch, 3.0*inch, 1.3*inch])
+        schedule_data.extend(processed_schedule_data)
+        
+        # Set optimized column widths - adjusted for better balance
+        col_widths = [
+            0.6*inch,   # Date column (slightly narrower)
+            1.1*inch,   # Topic column (slightly narrower)
+            3.0*inch,   # Readings column (wider for more content)
+            1.0*inch    # Work Due column
+        ]
+        
+        # Create schedule table with the adjusted column widths
+        schedule_table = Table(schedule_data, colWidths=col_widths, repeatRows=1)
+        
+        # Apply table styles with improved word wrapping settings
         schedule_table.setStyle(TableStyle([
+            # Header row styling
             ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
             ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, 0), 8),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
+            
+            # Content rows styling
             ('BACKGROUND', (0, 1), (-1, -1), colors.white),
             ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
             ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('FONTSIZE', (0, 1), (-1, -1), 7),  # Smaller font for better fit
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('ALIGN', (0, 1), (-1, -1), 'LEFT'),  # Left align content rows
-            ('LEFTPADDING', (0, 0), (-1, -1), 4),  # Add padding for better readability
-            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4)
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Align text to top
+            ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
+            
+            # Reduced padding for more content space
+            ('LEFTPADDING', (0, 0), (-1, -1), 2),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 2),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+            
+            # Critical for word wrapping
+            ('WORDWRAP', (0, 0), (-1, -1), True)
         ]))
+        
+        # Add the table to the story
         story.append(schedule_table)
         
-        # Define a PageTemplate with headers and footers if needed
-        from reportlab.platypus.frames import Frame
-        from reportlab.platypus.doctemplate import PageTemplate
+        # Define a page template with page numbers
+        def add_page_number(canvas, doc):
+            """Add page numbers to each page"""
+            canvas.saveState()
+            canvas.setFont('Helvetica', 9)
+            # Position the page number at the bottom center of the page
+            canvas.drawCentredString(letter[0]/2, 20, f"Page {canvas.getPageNumber()}")
+            canvas.restoreState()
         
-        # Build the PDF with our optimized settings
-        doc.build(story)
-        
+        # Build the document with page numbers
+        doc.build(story, onFirstPage=add_page_number, onLaterPages=add_page_number)
+
     def generate_syllabus(self, export_format="docx"):
         """Generate the final syllabus document"""
         if not self.validate_inputs():
@@ -2326,16 +2068,22 @@ class HistorySyllabusGenerator:
         # VI. Course Schedule
         doc.add_heading("VI. Calendar", level=1)
         
-        # Create schedule table with exact formatting
+        # Create schedule table with better sizing
         table = doc.add_table(rows=1, cols=4)
         table.style = 'Table Grid'
-        table.autofit = False
         
-        # Set column widths (adjust as needed)
-        widths = [Inches(1.2), Inches(2.2), Inches(3.5), Inches(1.5)]
-        for idx, width in enumerate(widths):
-            for row in table.rows:
-                row.cells[idx].width = width
+        # Important: Don't set specific widths, let Word handle the sizing
+        # Remove: table.autofit = False
+        
+        # Set column widths as proportions rather than absolute values
+        col_widths = [1, 2, 3, 1.5]  # Relative proportions
+        
+        # Apply the proportions to the table
+        for i, width in enumerate(col_widths):
+            table.columns[i].width = Inches(width)
+        
+        # Now tell Word to autofit the contents, so it overrides our proportions as needed
+        table.autofit = True
         
         # Header row
         header_cells = table.rows[0].cells
@@ -2372,6 +2120,35 @@ class HistorySyllabusGenerator:
                 paragraph = cell.paragraphs[0]
                 paragraph.paragraph_format.space_after = Pt(0)
                 paragraph.paragraph_format.space_before = Pt(0)
+        
+        # After the table is complete, ensure it auto-fits to content
+        for row in table.rows:
+            for cell in row.cells:
+                # Keep paragraphs, but force them to wrap text
+                for paragraph in cell.paragraphs:
+                    paragraph.paragraph_format.line_spacing = 1.0  # Single spacing
+        
+        # Add page numbers in the footer
+        section = doc.sections[0]
+        footer = section.footer
+        paragraph = footer.paragraphs[0]
+        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        # Replace the problematic code with this:
+        run = paragraph.add_run("Page ")
+        
+        # Add the PAGE field correctly
+        fldChar1 = OxmlElement('w:fldChar')
+        fldChar1.set(qn('w:fldCharType'), 'begin')
+        run._element.append(fldChar1)
+        
+        instrText = OxmlElement('w:instrText')
+        instrText.text = " PAGE "
+        run._element.append(instrText)
+        
+        fldChar2 = OxmlElement('w:fldChar')
+        fldChar2.set(qn('w:fldCharType'), 'end')
+        run._element.append(fldChar2)
         
         return doc
 
@@ -3135,6 +2912,30 @@ class HistorySyllabusGenerator:
             print(f"Error updating document preview: {e}")
             import traceback
             traceback.print_exc()
+
+        # At the very end of the function, after all content is added:
+        try:
+            # Add footer with page indicator
+            footer_frame = ttk.Frame(content_container, style="Preview.TFrame")
+            footer_frame.pack(fill=tk.X, pady=20)
+            
+            # Add note about pagination
+            ttk.Label(footer_frame, 
+                     text="Note: Page numbers will appear in the generated document",
+                     font=("Times New Roman", 9, "italic"),
+                     background="white").pack(side=tk.LEFT)
+            
+            # Show sample page number on right
+            ttk.Label(footer_frame, 
+                     text="Page X", 
+                     font=("Times New Roman", 9),
+                     background="white").pack(side=tk.RIGHT)
+            
+            # Add separator above footer
+            ttk.Separator(content_container, orient=tk.HORIZONTAL).pack(
+                fill=tk.X, pady=5, before=footer_frame)
+        except Exception as e:
+            print(f"Error adding page number preview: {e}")
 
     def _add_preview_section(self, parent, text, font_size=12, font_weight="normal"):
         """Add a section heading to the preview"""
