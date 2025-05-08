@@ -17,5 +17,3 @@ pip install openpyxl
 
 pip install tkinter
 
-
-To compile into .exe: 
