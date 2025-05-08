@@ -313,7 +313,180 @@ class HistorySyllabusGenerator:
                     "work_due": "Short Essay #2 due"
                 }
             ]
-            return [test_template]
+            # --- Add AMH2020 template ---
+            amh2020_template = SyllabusTemplate(
+                course_code="AMH2020",
+                title="United States Since 1877",
+                description=(
+                    "In this course, students will trace the history of the United States from the end of the Reconstruction era to the contemporary era. "
+                    "Topics will include but are not limited to the rise of Industrialization, the United States’ emergence as an actor on the world stage, "
+                    "Constitutional amendments and their impact, the Progressive era, World War I, the Great Depression and New Deal, World War II, the Civil Rights era, "
+                    "the Cold War, and the United States since 1989.\n\n"
+                    "NOTE: All topics in this course will be taught objectively as objects of analysis, without endorsement of particular viewpoints, and will be observed from multiple perspectives. "
+                    "No lesson is intended to espouse, promote, advance, inculcate, or compel a particular feeling, perception, or belief. Students are encouraged to employ critical thinking and to rely on data and verifiable sources to explore readings and subject matter in this course. All perspectives will be respected in class discussions."
+                ),
+                objectives=[
+                    "Address how the Civil War and Reconstruction set the stage for the development of the modern United States.",
+                    "Explore how US involvement in the Spanish-American War, World War One, and World War Two reshaped US foreign policy and civil society.",
+                    "Present the origins of the Cold War, its implications for US international relations, and its influence on American political culture.",
+                    "Enable students to analyze and evaluate the origins and influences of the civil rights movement, the Vietnam War, the women’s movement, and New Right conservatism.",
+                    "Teach students how to analyze historical documents and scholarship from a range of authors and time periods."
+                ],
+                outcomes=[
+                    "Describe the factual details of the substantive historical episodes under study.",
+                    "Identify and analyze foundational developments that shaped American history since 1877 using critical thinking skills.",
+                    "Demonstrate an understanding of the primary ideas, values, and perceptions that have shaped American history.",
+                    "Demonstrate competency in civic literacy."
+                ]
+            )
+            amh2020_template.prerequisites = "None."
+            amh2020_template.semester = "Spring 2025"
+            amh2020_template.credits = "3"
+            amh2020_template.class_days = "M, W"
+            amh2020_template.class_times = "12:50p - 1:40p"
+            amh2020_template.classroom = "MCCC 0100"
+            # Instructor/TA fields left blank for user to fill in
+            amh2020_template.tas = []
+            amh2020_template.learning_objectives = {
+                "Content": {
+                    "slo": "Identify, describe, and explain key themes, principles, and terminology; the history, theory and/or methodologies used; and social institutions, structures and processes.",
+                    "assignments": "Outcomes 1-4",
+                    "course_specific": "Students will demonstrate their knowledge of the details of the substantive historical episodes of US History since 1877 by analyzing primary and secondary sources in short papers, homework assignments, exams, and in-class discussion."
+                },
+                "Critical Thinking": {
+                    "slo": "Apply formal and informal qualitative or quantitative analysis effectively to examine the processes and means by which individuals make personal and group decisions. Assess and analyze ethical perspectives in individual and societal decisions.",
+                    "assignments": "Outcomes 1-4",
+                    "course_specific": "Students will demonstrate their ability in applying qualitative and quantitative methods by analyzing primary and secondary sources in short papers, homework assignments, and exams by using critical thinking skills."
+                },
+                "Communication": {
+                    "slo": "Communication is the development and expression of ideas in written and oral forms.",
+                    "assignments": "Outcomes 1-4",
+                    "course_specific": (
+                        "Students will identify and explain key developments that shaped United States history since 1877 in written assignments and class discussion.\n\n"
+                        "Students will demonstrate their understandings of the primary ideas, values, and perceptions that have shaped United States history and will describe them in written assignments, exams, and class discussion."
+                    )
+                }
+            }
+            amh2020_template.late_policy = "Custom"
+            amh2020_template.extra_credit_policy = "Custom"
+            amh2020_template.grading_categories = [
+                {
+                    "name": "Discussion Section Attendance",
+                    "weight": "10",
+                    "description": (
+                        "Your TA will maintain attendance records for all discussion sections. Students are permitted one unexcused absence without penalty, though they are still required to complete all discussion section homework. "
+                        "After the first unexcused absence, each subsequent unexcused absence will result in a one-point deduction from your overall course grade. Every two late arrivals to a discussion section counts as one unexcused absence. "
+                        "Students will not be penalized for university-excused absences; see UF’s excused absence policy."
+                    ),
+                    "assignments": []
+                },
+                {
+                    "name": "Discussion Section Homework and Participation",
+                    "weight": "15",
+                    "description": (
+                        "Participation is assessed based on section homework and meaningful contributions to class discussion. Homework will be announced on Monday and must be submitted via Canvas by 9:30a on Friday. "
+                        "This grade will be assessed by your TA, who will assign a participation score of 1-15 using the following rubric:\n\n"
+                        "1. (5 points) Student completes the five homework assignments (1 point/homework).\n"
+                        "2. (7 points) Student attends ten or more sections (.7 points/section attendance)\n"
+                        "3. (3 points) Student contributes actively to ten section meetings (.3 points/contribution)"
+                    ),
+                    "assignments": []
+                },
+                {
+                    "name": "Midterm Exam",
+                    "weight": "20",
+                    "description": (
+                        "This timed, closed-book exam will draw from the course's lectures, discussions, and readings. A study guide will be posted to Canvas."
+                    ),
+                    "assignments": [
+                        {
+                            "title": "Midterm Exam",
+                            "due_date": "",
+                            "points": "",
+                            "description": "Exam date and details to be announced in class and on Canvas."
+                        }
+                    ]
+                },
+                {
+                    "name": "Final Exam",
+                    "weight": "30",
+                    "description": (
+                        "This take-home exam will draw from the course's lectures, discussions, and readings. A study guide will be posted to Canvas."
+                    ),
+                    "assignments": [
+                        {
+                            "title": "Final Exam",
+                            "due_date": "",
+                            "points": "",
+                            "description": "Due date and details to be announced in class and on Canvas."
+                        }
+                    ]
+                },
+                {
+                    "name": "World War Two Essay",
+                    "weight": "10",
+                    "description": (
+                        "This essay requires students to use primary sources (marked with a [P] in the schedule) to develop their own arguments about US involvement in World War Two. "
+                        "This approximately 1200-word essay is due on Friday, March 14, at 9:30am EDT.\n\n"
+                        "A. World War II Paper Instructions: This essay should include three parts:\n"
+                        "• An introductory paragraph that clearly states your argument about whether the World War Two era was a high or low point of US commitment to freedom and democracy.\n"
+                        "• Several paragraphs that substantiate your argument with specific, cited evidence from Chapter 5 of Gerstle’s book, American Crucible, and at least three primary sources.\n"
+                        "• A 1-2 paragraph conclusion that summarizes your main argument and considers your argument’s implication for your broader understanding of the US government, democracy, warfare, personal liberty, and/or other relevant historical themes.\n\n"
+                        "B. World War II Paper Rubric: This essay will be evaluated on a 0-100 scale using these criteria:\n"
+                        "(20/100 points) Makes a clear argument in the introduction and substantiates that argument successfully throughout the paper.\n"
+                        "(40/100 points) Paper demonstrates thoughtful engagement with several historical examples and draws from the Gerstle chapter and at least three primary sources.\n"
+                        "(15/100 points) Conclusion summarizes the main argument and seriously considers that argument’s implication for your understanding of the federal government, democracy, warfare, individual liberty, and/or other relevant historical themes.\n"
+                        "(15/100 points) Paper properly cites relevant primary and/or secondary literature using MLA, APA, or Chicago citations.\n"
+                        "(10/100 points) Prose is clear, smoothly written, free of grammatical errors, and meets the word count base of 900 words (excluding title, citations, pagination, and bibliography)."
+                    ),
+                    "assignments": [
+                        {
+                            "title": "World War Two Essay",
+                            "due_date": "Friday, March 14, 9:30am EDT",
+                            "points": "",
+                            "description": "See instructions and rubric above."
+                        }
+                    ]
+                },
+                {
+                    "name": "Mini-Book Review",
+                    "weight": "15",
+                    "description": (
+                        "Students will use primary sources and skills learned in the course to review the third and fourth chapters of Nancy MacLean’s, Freedom Is Not Enough (2006). "
+                        "This approximately 1200-word paper is due on Friday, April 4, at 9:30am EDT.\n\n"
+                        "Mini-Book Review Instructions: Your mini-book review should include four parts:\n"
+                        "• One introductory paragraph that quickly (2-4 sentences) summarizes the chapters from Freedom Is Not Enough before clearly stating your argument about the book’s strengths and weaknesses in the last 1-2 sentences of that paragraph.\n"
+                        "• A second paragraph that provides a brief but thorough synopsis of the MacLean chapter’s structure, main argument(s), and key examples or pieces of evidence.\n"
+                        "• At least two body paragraphs that dissect the strengths and weaknesses of the book chapters by putting them into conversation with the at least three primary sources, at least two of which must be from the UF archives.\n"
+                        "• A few sentences at the end of the review that provide your overall appraisal of the book section and your suggestion whether or not others should read it.\n\n"
+                        "Mini-Book Review Grading Rubric: This essay will be graded on a 0-100 scale using the following criteria:\n"
+                        "(30/100 points) First and second paragraphs accurately summarizes the book chapter and makes a clear argument about its strengths and/or weaknesses.\n"
+                        "(40/100 points) Paper demonstrates thoughtful engagement with several historical examples and draws from at least three primary sources, two of which are from the UF archives.\n"
+                        "(15/100 points) Concluding sentences provide a compelling, summative appraisal of the chapter and clear recommendation about whether or not others should read it.\n"
+                        "(15/100 points) Paper properly cites relevant primary and/or secondary literature using MLA, APA, or Chicago citations.\n"
+                        "(10 points) Prose is clear, smoothly written, free of grammatical errors, and meets the word count base of 1000 words (excluding title, citations, pagination, and bibliography)."
+                    ),
+                    "assignments": [
+                        {
+                            "title": "Mini-Book Review",
+                            "due_date": "Friday, April 4, 9:30am EDT",
+                            "points": "",
+                            "description": "See instructions and rubric above."
+                        }
+                    ]
+                }
+            ]
+            amh2020_template.schedule = []  # Leave schedule empty for user to fill in
+            # Set policies
+            amh2020_template.optional_policies = {
+                "in_class_recording": True,
+                "conflict_resolution": True,
+                "campus_resources": True,
+                "academic_resources": True,
+                "late_work": True
+            }
+            # Add to templates list
+            return [test_template, amh2020_template]
         except Exception as e:
             print(f"Error loading default templates: {e}")
             return []
@@ -633,7 +806,7 @@ class HistorySyllabusGenerator:
     def create_assignments_tab(self):
         """Create the assignments and grading tab with proper layout"""
         tab = ttk.Frame(self.notebook)
-        self.notebook.add(tab, text="Assignments & Grading")
+        self.notebook.add(tab, text="★ Assignments & Grading [Required]")
         self.add_mousewheel_scrolling(tab, tab)
 
         # Create a canvas with scrollbar for the main content
@@ -2000,7 +2173,7 @@ class HistorySyllabusGenerator:
         else:
             doc.add_paragraph("Unless an extension is granted, assignments will incur a 10-point penalty for every day they are late, beginning the minute after the official deadline passes.")
         
-        # Extra Credit policy (always include)
+        # Extra Credit policy (always included)
         doc.add_heading("Extra Credit", level=2)
         if hasattr(self, 'extra_credit_text') and self.extra_credit_text.get("1.0", tk.END).strip():
             doc.add_paragraph(self.extra_credit_text.get("1.0", tk.END).strip())
@@ -3095,17 +3268,38 @@ class HistorySyllabusGenerator:
         self.notebook = ttk.Notebook(self.main_container)
         self.notebook.pack(fill=tk.BOTH, expand=True)
 
-        # Add tabs for different sections
+        # --- Add tabs in the order requested, with "Required" indicator ---
+        # 1. Course Info (Required)
         self.create_course_info_tab()
+        self.notebook.tab(0, text="★ Course Information [Required]")
+
+        # 2. Instructor Info (Required)
         self.create_instructor_info_tab()
+        self.notebook.tab(1, text="★ Instructor Information [Required]")
+
+        # 3. Assignments & Grading
+        self.create_assignments_tab()
+        self.notebook.tab(2, text="★ Assignments & Grading [Required]")
+
+        # 4. Schedule
+        self.create_schedule_tab()
+        self.notebook.tab(3, text="Calendar/Course Schedule")
+
+        # 5. Learning Objectives
         self.create_learning_objectives_tab()
-        self.create_assignments_tab()    # <-- Moved before schedule tab
-        self.create_schedule_tab()       # <-- Schedule tab now comes after assignments tab
+        self.notebook.tab(4, text="Learning Objectives & SLOs")
+
+        # 6. Policies (all policy stuff at the end)
         self.create_policies_tab()
+        self.notebook.tab(5, text="Policies")
+
+        # 7. Document Preview
         self.create_document_preview_tab()
+        self.notebook.tab(6, text="Document Preview")
+
         # Add action buttons at the bottom
         self.create_action_buttons()
-        
+
     def add_objective_entry(self, default_text=""):
         """Add a new course objective entry with a number"""
         frame = ttk.Frame(self.objective_entries_frame)
