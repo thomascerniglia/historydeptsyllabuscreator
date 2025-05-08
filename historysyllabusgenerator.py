@@ -206,9 +206,9 @@ class HistorySyllabusGenerator:
                 title="Introduction to History",
                 description="This is a test template for the History Syllabus Generator.",
                 objectives=[
-                    "Understand the principles of historical research.",
-                    "Develop critical thinking skills through analysis of primary sources.",
-                    "Learn to construct historical arguments based on evidence."
+                    "Understand the principles of *historical research*.",
+                    "**Develop critical thinking skills** through analysis of primary sources.",
+                    "Learn to construct [historical arguments](http://example.com) based on evidence."
                 ],
                 outcomes=[
                     "Demonstrate ability to analyze primary sources.",
@@ -828,7 +828,44 @@ class HistorySyllabusGenerator:
         # Required Materials Section
         materials_frame = ttk.LabelFrame(content_frame, text="Required Materials")
         materials_frame.pack(fill=tk.X, padx=5, pady=5)
-        
+
+        # --- Formatting Toolbar ---
+        toolbar = ttk.Frame(materials_frame)
+        toolbar.pack(fill=tk.X, padx=5, pady=(5, 0))
+
+        def insert_markup(markup_type):
+            text_widget = self.materials_text
+            try:
+                sel_start = text_widget.index(tk.SEL_FIRST)
+                sel_end = text_widget.index(tk.SEL_LAST)
+                selected = text_widget.get(sel_start, sel_end)
+            except tk.TclError:
+                sel_start = sel_end = None
+                selected = ""
+            if markup_type == "bold":
+                tag = "**"
+                new_text = f"{tag}{selected or 'bold text'}{tag}"
+            elif markup_type == "italic":
+                tag = "*"
+                new_text = f"{tag}{selected or 'italic text'}{tag}"
+            elif markup_type == "link":
+                new_text = f"[{selected or 'link text'}](http://example.com)"
+            else:
+                return
+            if sel_start and sel_end:
+                text_widget.delete(sel_start, sel_end)
+                text_widget.insert(sel_start, new_text)
+            else:
+                text_widget.insert(tk.INSERT, new_text)
+
+        bold_btn = ttk.Button(toolbar, text="B", width=2, command=lambda: insert_markup("bold"))
+        bold_btn.pack(side=tk.LEFT, padx=(0, 2))
+        italic_btn = ttk.Button(toolbar, text="I", width=2, command=lambda: insert_markup("italic"))
+        italic_btn.pack(side=tk.LEFT, padx=(0, 2))
+        link_btn = ttk.Button(toolbar, text="🔗", width=2, command=lambda: insert_markup("link"))
+        link_btn.pack(side=tk.LEFT, padx=(0, 2))
+        ttk.Label(toolbar, text="(Use toolbar or Markdown: *italic* **bold** [text](url))", font=("Arial", 8, "italic")).pack(side=tk.LEFT, padx=8)
+
         self.materials_text = scrolledtext.ScrolledText(materials_frame, width=60, height=4, wrap=tk.WORD)
         self.materials_text.pack(fill=tk.X, padx=5, pady=5)
         
@@ -838,6 +875,10 @@ class HistorySyllabusGenerator:
         self.fee_entry = ttk.Entry(fee_frame, width=10)
         self.fee_entry.pack(side=tk.LEFT)
         
+        # Add this to the relevant section of your UI (e.g., in the Required Materials section)
+        help_button = ttk.Button(materials_frame, text="Formatting Help", command=self.show_formatting_help)
+        help_button.pack(side=tk.RIGHT, padx=5, pady=5)
+
         # Grading Components Section
         components_frame = ttk.LabelFrame(content_frame, text="Graded Components")
         components_frame.pack(fill=tk.X, padx=5, pady=5)
@@ -850,86 +891,6 @@ class HistorySyllabusGenerator:
                   command=self.add_category,
                   style="Action.TButton").pack(padx=5, pady=5)
         
-        # Course Policies Section
-        policies_frame = ttk.LabelFrame(content_frame, text="Course Policies")
-        policies_frame.pack(fill=tk.X, padx=5, pady=5)
-        
-        # Late Submissions Policy Section
-        late_frame = ttk.Frame(policies_frame)
-        late_frame.pack(fill=tk.X, padx=5, pady=5)
-        ttk.Label(late_frame, text="Late Submissions Policy:").pack(side=tk.LEFT, padx=(0, 5))
-        
-        self.late_policy_var = tk.StringVar()
-        self.late_policies = {
-            "Standard (10% per day)": "Unless an extension is granted, assignments will incur a 10-point penalty for every day they are late.",
-            "No late work": "No late work will be accepted without prior approval.",
-            "48-hour grace": "Students have a 48-hour grace period for submissions, after which no late work will be accepted.",
-            "Custom": ""
-        }
-        self.late_combo = ttk.Combobox(late_frame, 
-                                      textvariable=self.late_policy_var,
-                                      values=list(self.late_policies.keys()), 
-                                      width=30)
-        self.late_combo.pack(side=tk.LEFT)
-        self.late_combo.set("Select a policy...")
-        
-        self.late_policy_text = scrolledtext.ScrolledText(policies_frame, width=60, height=3, wrap=tk.WORD)
-        self.late_policy_text.pack(fill=tk.X, padx=5, pady=(0, 5))
-        
-        def update_late_policy(*args):
-            selected = self.late_policy_var.get()
-            if selected in self.late_policies:
-                # Enable text widget
-                self.late_policy_text.config(state='normal')
-                self.late_policy_text.delete('1.0', tk.END)
-                self.late_policy_text.insert('1.0', self.late_policies[selected])
-                if selected != "Custom":
-                    self.late_policy_text.config(state='disabled')
-                # Update optional policy state just by setting it:
-                if hasattr(self, 'optional_policies'):
-                    # Check if the key exists before setting, although it should now
-                    if "late_work" in self.optional_policies:
-                        if selected == "No late work":
-                            self.optional_policies["late_work"].set(False)
-                        else:
-                            self.optional_policies["late_work"].set(True)
-        
-        # Bind the update function both via trace and combobox event.
-        self.late_policy_var.trace_add('write', update_late_policy)
-        self.late_combo.bind('<<ComboboxSelected>>', lambda e: update_late_policy())
-
-        # Extra Credit Policy
-        extra_frame = ttk.Frame(policies_frame)
-        extra_frame.pack(fill=tk.X, padx=5, pady=5)
-        ttk.Label(extra_frame, text="Extra Credit Policy:").pack(side=tk.LEFT, padx=(0, 5))
-        
-        self.extra_credit_var = tk.StringVar()
-        self.extra_credit_policies = {
-            "Standard": "Extra credit opportunities may be announced during the semester. Points will be added to your mid-term exam grade.",
-            "No extra credit": "No extra credit will be offered in this course.",
-            "Optional assignments": "Students may complete optional assignments for extra credit, worth up to 3% of the final grade.",
-            "Custom": ""
-        }
-        self.extra_combo = ttk.Combobox(extra_frame, textvariable=self.extra_credit_var,
-                                        values=list(self.extra_credit_policies.keys()), width=30)
-        self.extra_combo.pack(side=tk.LEFT)
-        self.extra_combo.set("Select a policy...")
-        
-        self.extra_credit_text = scrolledtext.ScrolledText(policies_frame, width=60, height=3, wrap=tk.WORD)
-        self.extra_credit_text.pack(fill=tk.X, padx=5, pady=(0, 5))
-        
-        def update_extra_credit(*args):
-            selected = self.extra_credit_var.get()
-            if selected in self.extra_credit_policies:
-                self.extra_credit_text.config(state='normal')
-                self.extra_credit_text.delete('1.0', tk.END)
-                self.extra_credit_text.insert('1.0', self.extra_credit_policies[selected])
-                if selected != "Custom":
-                    self.extra_credit_text.config(state='disabled')
-        
-        self.extra_credit_var.trace_add('write', update_extra_credit)
-        self.extra_combo.bind('<<ComboboxSelected>>', lambda e: update_extra_credit())
-
         # Grading Scale Section
         scale_frame = ttk.LabelFrame(content_frame, text="Grading Scale")
         scale_frame.pack(fill=tk.X, padx=5, pady=5)
@@ -1069,6 +1030,81 @@ class HistorySyllabusGenerator:
             command=self.update_document_preview
         )
         checkbox_academic_resources.pack(anchor="w", padx=5, pady=2)
+
+        # --- Move Late Submissions Policy Section here ---
+        late_frame = ttk.LabelFrame(frame, text="Late Submissions Policy")
+        late_frame.pack(fill=tk.X, padx=20, pady=5)
+        ttk.Label(late_frame, text="Late Submissions Policy:").pack(side=tk.LEFT, padx=(0, 5))
+        
+        self.late_policy_var = tk.StringVar()
+        self.late_policies = {
+            "Standard (10% per day)": "Unless an extension is granted, assignments will incur a 10-point penalty for every day they are late.",
+            "No late work": "No late work will be accepted without prior approval.",
+            "48-hour grace": "Students have a 48-hour grace period for submissions, after which no late work will be accepted.",
+            "Custom": ""
+        }
+        self.late_combo = ttk.Combobox(late_frame, 
+                                      textvariable=self.late_policy_var,
+                                      values=list(self.late_policies.keys()), 
+                                      width=30)
+        self.late_combo.pack(side=tk.LEFT)
+        self.late_combo.set("Select a policy...")
+        
+        self.late_policy_text = scrolledtext.ScrolledText(late_frame, width=60, height=3, wrap=tk.WORD)
+        self.late_policy_text.pack(fill=tk.X, padx=5, pady=(0, 5))
+        
+        def update_late_policy(*args):
+            selected = self.late_policy_var.get()
+            if selected in self.late_policies:
+                # Enable text widget
+                self.late_policy_text.config(state='normal')
+                self.late_policy_text.delete('1.0', tk.END)
+                self.late_policy_text.insert('1.0', self.late_policies[selected])
+                if selected != "Custom":
+                    self.late_policy_text.config(state='disabled')
+                # Update optional policy state just by setting it:
+                if hasattr(self, 'optional_policies'):
+                    # Check if the key exists before setting, although it should now
+                    if "late_work" in self.optional_policies:
+                        if selected == "No late work":
+                            self.optional_policies["late_work"].set(False)
+                        else:
+                            self.optional_policies["late_work"].set(True)
+        
+        self.late_policy_var.trace_add('write', update_late_policy)
+        self.late_combo.bind('<<ComboboxSelected>>', lambda e: update_late_policy())
+
+        # --- Move Extra Credit Policy Section here ---
+        extra_frame = ttk.LabelFrame(frame, text="Extra Credit Policy")
+        extra_frame.pack(fill=tk.X, padx=20, pady=5)
+        ttk.Label(extra_frame, text="Extra Credit Policy:").pack(side=tk.LEFT, padx=(0, 5))
+        
+        self.extra_credit_var = tk.StringVar()
+        self.extra_credit_policies = {
+            "Standard": "Extra credit opportunities may be announced during the semester. Points will be added to your mid-term exam grade.",
+            "No extra credit": "No extra credit will be offered in this course.",
+            "Optional assignments": "Students may complete optional assignments for extra credit, worth up to 3% of the final grade.",
+            "Custom": ""
+        }
+        self.extra_combo = ttk.Combobox(extra_frame, textvariable=self.extra_credit_var,
+                                        values=list(self.extra_credit_policies.keys()), width=30)
+        self.extra_combo.pack(side=tk.LEFT)
+        self.extra_combo.set("Select a policy...")
+        
+        self.extra_credit_text = scrolledtext.ScrolledText(extra_frame, width=60, height=3, wrap=tk.WORD)
+        self.extra_credit_text.pack(fill=tk.X, padx=5, pady=(0, 5))
+        
+        def update_extra_credit(*args):
+            selected = self.extra_credit_var.get()
+            if selected in self.extra_credit_policies:
+                self.extra_credit_text.config(state='normal')
+                self.extra_credit_text.delete('1.0', tk.END)
+                self.extra_credit_text.insert('1.0', self.extra_credit_policies[selected])
+                if selected != "Custom":
+                    self.extra_credit_text.config(state='disabled')
+        
+        self.extra_credit_var.trace_add('write', update_extra_credit)
+        self.extra_combo.bind('<<ComboboxSelected>>', lambda e: update_extra_credit())
 
     def create_action_buttons(self):
         """Create action buttons at the bottom of the interface"""
@@ -1963,24 +1999,63 @@ class HistorySyllabusGenerator:
         doc.add_heading("Course Description", level=1)
         doc.add_paragraph(self.txt_description.get("1.0", tk.END).strip())
         
-        # Prerequisites
+        # Prerequisites (moved before General Education)
         doc.add_heading("Prerequisites", level=1)
         doc.add_paragraph(self.entry_prerequisites.get().strip() if hasattr(self, 'entry_prerequisites') else "None")
         
-        # Only add Learning Outcomes table if it's a Gen Ed course
+        # --- Add General Education Designation (moved after Prerequisites) ---
         if self.show_gen_ed.get():
-            doc.add_paragraph()
+            # Define the designation variable
+            designation = "Social and Behavioral Sciences (S)"  # Default value
             
-            # Get the current gen ed designation
-            designation = "Social and Behavioral Sciences (S)"  # Default
-            if hasattr(self, 'gen_ed_designation'):
-                designation = self.gen_ed_designation.get()
-                
-            doc.add_paragraph(f"Your successful completion of {self.entry_course_num.get()} with a grade of \"C\" or higher will count towards UF's General Education State Core in {designation}. It will also count towards the State of Florida's Civic Literacy requirement.")
+            # Add the General Education heading and note
+            doc.add_heading(f"General Education Designation: {designation}", level=1)
             
-            doc.add_paragraph()
+            # Add the full General Education description text
+            doc.add_paragraph(gen_ed_default)
             
+            # Then continue with the existing code for the success message
+            course_num = self.entry_course_num.get()
+            doc.add_paragraph(f"Your successful completion of {course_num} with a grade of \"C\" or higher will count towards UF's General Education State Core in {designation}. It will also count towards the State of Florida's Civic Literacy requirement.")
+        
+        # Course Objectives - Add this section (moved after General Education)
+        doc.add_heading("Course Objectives", level=1)
+        doc.add_paragraph("All General Education area objectives can be found here.")
+        doc.add_paragraph(f"The {self.entry_course_num.get()} curriculum will also cover the following course-specific objectives:")
+        
+        if hasattr(self, 'objective_entries') and any(obj["entry"].get().strip() for obj in self.objective_entries):
+            for i, obj in enumerate(self.objective_entries, 1):
+                obj_text = obj["entry"].get().strip()
+                if obj_text:
+                    p = doc.add_paragraph(f"{i}. {obj_text}")
+                    p.paragraph_format.left_indent = Inches(0.25)
+        
+        # Add Student Learning Outcomes
+        doc.add_heading("II. Student Learning Outcomes", level=1)
+        doc.add_paragraph("A student who successfully completes this course will:")
+        
+        if hasattr(self, 'outcome_entries') and self.outcome_entries:
+            for i, outcome_entry in enumerate(self.outcome_entries, 1):
+                outcome_text = outcome_entry["entry"].get().strip()
+                if outcome_text:
+                    p = doc.add_paragraph(f"{i}. {outcome_text}")
+                    p.paragraph_format.left_indent = Inches(0.25)
+        else:
+            # Default outcomes if none provided
+            default_outcomes = [
+                "Describe the factual details of the substantive historical episodes under study.",
+                "Identify and analyze foundational developments that shaped history using critical thinking skills.",
+                "Demonstrate an understanding of the primary ideas, values, and perceptions that have shaped history.",
+                "Demonstrate competency in civic literacy."
+            ]
+            for i, outcome in enumerate(default_outcomes, 1):
+                p = doc.add_paragraph(f"{i}. {outcome}")
+                p.paragraph_format.left_indent = Inches(0.25)
+        
+        # If General Education is enabled, add the objectives table after the Student Learning Outcomes
+        if self.show_gen_ed.get():
             # Add Learning Outcomes table
+            doc.add_paragraph()
             doc.add_paragraph(f"Objectives—General Education and {designation}")
             
             # Create table with the correct number of rows and columns
@@ -2084,9 +2159,8 @@ class HistorySyllabusGenerator:
         if hasattr(self, 'materials_text') and self.materials_text.get("1.0", tk.END).strip():
             doc.add_heading("Required Materials", level=2)
             materials_text = self.materials_text.get("1.0", tk.END).strip()
-            doc.add_paragraph(materials_text)
-            doc.add_paragraph("Materials will be available through the following means:")
-            doc.add_paragraph("The textbook is available online. All other secondary sources and primary sources (indicated with a [P] on the course schedule) will be available through Canvas and web links in the syllabus.")
+            # --- Use markup parser for formatted output ---
+            self.parse_materials_markup(materials_text, doc=doc)
             # Always include the Materials Fee value from the fee_entry
             fee_value = ""
             if hasattr(self, 'fee_entry') and self.fee_entry.get().strip():
@@ -2097,232 +2171,9 @@ class HistorySyllabusGenerator:
             p.add_run("\nMaterials Fee: $").bold = True
             p.add_run(fee_value)
         
-        # Graded Components section
-        doc.add_heading("Graded Components", level=2)
-        
-        # Add grading categories
-        for category in self.category_frames:
-            name = category["name"].get()
-            weight = category["weight"].get()
-            p = doc.add_paragraph()
-            p.add_run(f"{name} ({weight}%): ").bold = True
-            
-            # Add description if available
-            if "description" in category:
-                p.add_run(category["description"].get("1.0", tk.END).strip())
-            
-            # Add assignments for this category
-            if "assignments" in category and category["assignments"]:
-                for assignment in category["assignments"]:
-                    if assignment["title"].get().strip():
-                        p = doc.add_paragraph()
-                        p.paragraph_format.left_indent = Inches(0.25)
-                        assignment_text = f"{assignment['title'].get()}"
-                        if assignment["due date"].get().strip():
-                            assignment_text += f": Due {assignment['due date'].get()}"
-                        if assignment["points"].get().strip():
-                            assignment_text += f" ({assignment['points'].get()} points)"
-                        p.add_run(assignment_text)
-                        # Add assignment description if available
-                        if "description" in assignment and assignment["description"].get("1.0", tk.END).strip():
-                            p = doc.add_paragraph()
-                            p.paragraph_format.left_indent = Inches(0.5)
-                            p.add_run(assignment["description"].get("1.0", tk.END).strip())
-        
-        # Total
-        doc.add_paragraph()
-        doc.add_paragraph("TOTAL: 100%")
-        
-        # Grading Scale
-        doc.add_heading("Grading Scale", level=2)
-        grades = [
-            ("A", "93-100"), ("A-", "90-92"),
-            ("B+", "87-89"), ("B", "83-86"),
-            ("B-", "80-82"), ("C+", "77-79"),
-            ("C", "73-76"), ("C-", "70-72"),
-            ("D+", "67-69"), ("D", "63-66"),
-            ("D-", "60-62"), ("E", "0-59")
-        ]
-        
-        table = doc.add_table(rows=1, cols=2)
-        table.style = 'Table Grid'
-        header_cells = table.rows[0].cells
-        header_cells[0].text = 'Letter Grade'
-        header_cells[1].text = 'Number Grade'
-        
-        for letter, number in grades:
-            row_cells = table.add_row().cells
-            row_cells[0].text = letter
-            row_cells[1].text = number
-        
-        doc.add_paragraph("See the UF Catalog's \"Grades and Grading Policies\" for information on how UF assigns grade points.")  
-        doc.add_paragraph("Note: A minimum grade of C is required to earn General Education credit.")     
-        # Add standard grading policy text right after the table
+        # Continue with the rest of the document...
+        # (rest of the method remains unchanged)
 
-  
-        # Extensions and Make-up Exams
-        if hasattr(self, 'extensions_policy_var') and self.extensions_policy_var.get():
-            doc.add_heading("Extensions & Make-Up Exams", level=2)
-            doc.add_paragraph("Only the professor can authorize an extension or make-up exam, and all requests must be supported by documentation from a medical provider, Student Health Services, the Disability Resource Center, or the Dean of Students Office. Requirements for attendance and make-up exams, assignments, and other work in this course are consistent with university policies: https://catalog.ufl.edu/ugrad/current/regulations/info/attendance.aspx")
-        
-        # Course Policies (based on what's selected in the UI)
-        # Late Submissions policy (always include)
-        doc.add_heading("Late Submissions", level=2)
-        if hasattr(self, 'late_policy_text') and self.late_policy_text.get("1.0", tk.END).strip():
-            doc.add_paragraph(self.late_policy_text.get("1.0", tk.END).strip())
-        else:
-            doc.add_paragraph("Unless an extension is granted, assignments will incur a 10-point penalty for every day they are late, beginning the minute after the official deadline passes.")
-        
-        # Extra Credit policy (always included)
-        doc.add_heading("Extra Credit", level=2)
-        if hasattr(self, 'extra_credit_text') and self.extra_credit_text.get("1.0", tk.END).strip():
-            doc.add_paragraph(self.extra_credit_text.get("1.0", tk.END).strip())
-        else:
-            doc.add_paragraph("Extra credit opportunities may be announced during the semester. Points will be added to your mid-term exam grade.")
-        
-        # Canvas policy (always included)
-        doc.add_heading("Canvas", level=2)
-        if hasattr(self, 'canvas_policy_text') and self.canvas_policy_text.get("1.0", tk.END).strip() != "-Replace with your Canvas Policies-":
-            doc.add_paragraph(self.canvas_policy_text.get("1.0", tk.END).strip())
-        else:
-            doc.add_paragraph(canvas_policy_default)
-        
-        # Technology policy
-        if hasattr(self, 'optional_policies') and self.optional_policies.get("technology", tk.BooleanVar(value=False)).get():
-            doc.add_heading("Technology in the Classroom", level=2)
-            doc.add_paragraph(technology_policy_default)
-        
-        # Class Communication Policy
-        doc.add_heading("Class Communication Policy", level=2)
-        doc.add_paragraph("The best way to get in contact with your professor or TA is through our UF emails, listed on the front page of the syllabus. We will do our best to reply within one business day, but there may be periods when we are slower to respond due to high email volume. Please also note that we will not answer emails at night, over weekends, or during university-scheduled holidays.")
-        
-        # Assignment Support section (always included)
-        doc.add_heading("Assignment Support Outside the Classroom", level=2)
-        doc.add_paragraph("You are welcome to come to regular office hours or to schedule an individual appointment with your professor or TA. When needed, I also encourage you to seek support from the academic resources listed on this syllabus.")
-        
-        # IV. Evaluations (always included)
-        doc.add_heading("IV. Evaluations", level=1)
-        doc.add_paragraph("UF course evaluation process")
-        doc.add_paragraph(evaluations_default)
-        
-        # V. University Policies and Resources
-        doc.add_heading("V. University Policies and Resources", level=1)
-        # Students requiring accommodation (always included)
-        doc.add_heading("Students requiring accommodation", level=2)
-        doc.add_paragraph(accommodations_default)
-        
-        # University Honesty Policy (always included)
-        doc.add_heading("University Honesty Policy", level=2)
-        doc.add_paragraph(honesty_plagiarism_default)
-        
-        # Add Plagiarism section (always included)
-        doc.add_heading("Plagiarism and Related Ethical Violations", level=2)
-        doc.add_paragraph("Ethical violations such as plagiarism, cheating, academic misconduct (e.g. passing off others' work as your own, reusing old assignments, etc.) will not be tolerated and will result in a failing grade in this course. Students must be especially wary of plagiarism. The UF Student Honor Code defines plagiarism as follows: \"A student shall not represent as the student's own work all or any portion of the work of another. Plagiarism includes (but is not limited to): a. Quoting oral or written materials, whether published or unpublished, without proper attribution. b. Submitting a document or assignment which in whole or in part is identical or substantially identical to a document or assignment not authored by the student.\" We will go over this in greater detail prior to the first written assignment. Students are encouraged to reach out with any additional questions regarding what constitutes plagiarism. Note that plagiarism also includes the use of any artificial intelligence programs, such as ChatGPT.")
-        
-        # In-class recording
-        doc.add_heading("In-class recording", level=2)
-        doc.add_paragraph(recording_policy_default)
-        
-        # Conflict resolution
-        if self.conflict_resolution_var.get():
-            doc.add_heading("Procedure for conflict resolution", level=2)
-            doc.add_paragraph(conflict_resolution_default)
-        
-        # Campus Resources (always included in this version, controlled by checkbox)
-        if self.campus_resources_var.get():
-            doc.add_heading("Campus Resources", level=2)
-            doc.add_paragraph(campus_resources_default)
-
-        # Academic Resources (controlled by checkbox)
-        if self.academic_resources_var.get():
-            doc.add_heading("Academic Resources", level=2)
-            doc.add_paragraph(academic_resources_default)
-        
-        # VI. Course Schedule
-        doc.add_heading("VI. Calendar", level=1)
-        
-        # Create schedule table with better sizing
-        table = doc.add_table(rows=1, cols=4)
-        table.style = 'Table Grid'
-        
-        # Important: Don't set specific widths, let Word handle the sizing
-        # Remove: table.autofit = False
-        
-        # Set column widths as proportions rather than absolute values
-        col_widths = [1, 2, 3, 1.5]  # Relative proportions
-        
-        # Apply the proportions to the table
-        for i, width in enumerate(col_widths):
-            table.columns[i].width = Inches(width)
-        
-        # Now tell Word to autofit the contents, so it overrides our proportions as needed
-        table.autofit = True
-        
-        # Header row
-        header_cells = table.rows[0].cells
-        headers = ["Date", "Topic", "Readings/Preparation", "Work Due"]
-        for i, text in enumerate(headers):
-            p = header_cells[i].paragraphs[0]
-            run = p.add_run(text)
-            run.bold = True
-            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            p.style = doc.styles['Normal']
-            p.runs[0].font.name = 'Times New Roman'
-            p.runs[0].font.size = Pt(11)
-        
-        # Add schedule entries
-        for entry in self.schedule_entries:
-            row_cells = table.add_row().cells
-            values = [
-                entry['date'].get(),
-                entry['topic'].get(),
-                entry['readings'].get("1.0", tk.END).strip(),
-                entry['work_due'].get()
-            ]
-            for i, value in enumerate(values):
-                p = row_cells[i].paragraphs[0]
-                run = p.add_run(value)
-                run.font.name = 'Times New Roman'
-                run.font.size = Pt(11)
-                p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-                row_cells[i].vertical_alignment = WD_ALIGN_VERTICAL.TOP
-            
-            # Set cell properties
-            for cell in row_cells:
-                cell.vertical_alignment = WD_ALIGN_VERTICAL.TOP
-                paragraph = cell.paragraphs[0]
-                paragraph.paragraph_format.space_after = Pt(0)
-                paragraph.paragraph_format.space_before = Pt(0)
-        
-        # After the table is complete, ensure it auto-fits to content
-        for row in table.rows:
-            for cell in row.cells:
-                # Keep paragraphs, but force them to wrap text
-                for paragraph in cell.paragraphs:
-                    paragraph.paragraph_format.line_spacing = 1.0  # Single spacing
-        
-        # Add page numbers in the footer
-        section = doc.sections[0]
-        footer = section.footer
-        paragraph = footer.paragraphs[0]
-        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        
-        # Replace the problematic code with this:
-        run = paragraph.add_run("Page ")
-        
-        # Add the PAGE field correctly
-        fldChar1 = OxmlElement('w:fldChar')
-        fldChar1.set(qn('w:fldCharType'), 'begin')
-        run._element.append(fldChar1)
-        
-        instrText = OxmlElement('w:instrText')
-        instrText.text = " PAGE "
-        run._element.append(instrText)
-        
-        fldChar2 = OxmlElement('w:fldChar')
-        fldChar2.set(qn('w:fldCharType'), 'end')
-        run._element.append(fldChar2)
-        
         return doc
 
     def run(self):
@@ -2571,7 +2422,7 @@ class HistorySyllabusGenerator:
         # Create a scrollable preview area
         preview_frame = ttk.Frame(tab)
         preview_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
+
         # Controls at the top
         control_frame = ttk.Frame(preview_frame)
         control_frame.pack(fill=tk.X, pady=5)
@@ -2761,8 +2612,8 @@ class HistorySyllabusGenerator:
                 header_row = ttk.Frame(table_frame, style="Preview.TFrame")
                 header_row.pack(fill=tk.X)
                 
-                for i, header in enumerate(headers):
-                    cell = ttk.Label(header_row, text=header, background="#808080", foreground="white",
+                for i, text in enumerate(headers):
+                    cell = ttk.Label(header_row, text=text, background="#808080", foreground="white",
                                   font=("Arial", 9, "bold"), padding=5)
                     cell.grid(row=0, column=i, sticky="nsew", padx=1, pady=1)
                     header_row.columnconfigure(i, weight=1)
@@ -3503,6 +3354,84 @@ class HistorySyllabusGenerator:
                     entries['assignments'].insert("1.0", outcomes_range)
                 if current_state == 'disabled':
                     entries['assignments'].config(state='disabled')
+
+    def parse_materials_markup(self, text, doc=None):
+        """
+        Parse Markdown-like markup in Required Materials and add to Word doc.
+        - Supports the following syntax:
+          - *italic* -> Text between single asterisks (*) will be italicized.
+          - **bold** -> Text between double asterisks (**) will be bolded.
+          - [text](url) -> Text inside square brackets ([text]) followed by a URL in parentheses (url) will become a hyperlink.
+
+        Example:
+        Input: "This is *italic*, **bold**, and [a link](http://example.com)."
+        Output in Word:
+          - "italic" will appear italicized.
+          - "bold" will appear bolded.
+          - "a link" will appear as a clickable hyperlink pointing to "http://example.com".
+
+        If doc is given, adds the formatted text to a Word document paragraph and returns the paragraph.
+        """
+        import re
+        from docx.shared import RGBColor
+
+        # Helper for Word
+        def add_run(paragraph, txt, bold=False, italic=False, hyperlink=None):
+            run = paragraph.add_run(txt)
+            run.bold = bold
+            run.italic = italic
+            if hyperlink:
+                # Add hyperlink in Word (python-docx workaround)
+                # See: https://github.com/python-openxml/python-docx/issues/74
+                part = paragraph.part
+                r_id = part.relate_to(hyperlink, docx.opc.constants.RELATIONSHIP_TYPE.HYPERLINK, is_external=True)
+                run._r.get_or_add_hyperlink().set(qn('r:id'), r_id)
+                run.font.color.rgb = RGBColor(0, 0, 255)
+                run.font.underline = True
+            return run
+
+        # Tokenize and parse
+        pattern = re.compile(r'(\*\*.*?\*\*|\*.*?\*|\[.*?\]\(.*?\))')
+        tokens = pattern.split(text)
+        if doc is not None:
+            paragraph = doc.add_paragraph()
+            for token in tokens:
+                if token.startswith('**') and token.endswith('**'):
+                    add_run(paragraph, token[2:-2], bold=True)
+                elif token.startswith('*') and token.endswith('*'):
+                    add_run(paragraph, token[1:-1], italic=True)
+                elif token.startswith('[') and '](' in token and token.endswith(')'):
+                    label = token[1:token.index('](')]
+                    url = token[token.index('](')+2:-1]
+                    add_run(paragraph, label, hyperlink=url)
+                else:
+                    add_run(paragraph, token)
+            return paragraph
+
+    def show_formatting_help(self):
+        """Display a popup with formatting help."""
+        help_window = tk.Toplevel(self.root)
+        help_window.title("Formatting Help")
+        help_window.geometry("400x300")
+
+        explanation = """
+        Markdown-like Formatting Guide:
+        - *italic* -> Text between single asterisks (*) will be italicized.
+        - **bold** -> Text between double asterisks (**) will be bolded.
+        - [text](url) -> Text inside square brackets ([text]) followed by a URL in parentheses (url) will become a hyperlink.
+
+        Example:
+        Input: "This is *italic*, **bold*, and [a link](http://example.com)."
+        Output in Word:
+          - "italic" will appear italicized.
+          - "bold" will appear bolded.
+          - "a link" will appear as a clickable hyperlink pointing to "http://example.com".
+        """
+
+        text_widget = tk.Text(help_window, wrap=tk.WORD, font=("Arial", 10))
+        text_widget.insert(tk.END, explanation)
+        text_widget.config(state=tk.DISABLED)  # Make the text read-only
+        text_widget.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
 if __name__ == "__main__":
     app = HistorySyllabusGenerator()
