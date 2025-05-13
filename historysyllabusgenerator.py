@@ -172,8 +172,6 @@ class HistorySyllabusGenerator:
         self.category_frames = []
         # Store learning objective entries
         self.learning_objectives_entries = {}
-        # Store outcome entries
-        self.outcome_entries = []
         # Set up styles
         self.setup_styles()
         # Add variable for Gen Ed toggle
@@ -191,12 +189,20 @@ class HistorySyllabusGenerator:
             "academic_resources": self.academic_resources_var,
             "late_work": self.late_work_var
         }
-        self.create_main_interface()  # <-- Only call here!
+        
+        # Create action frame FIRST before main_container
+        # This ensures it's always at the bottom regardless of content
+        self.create_action_buttons()
+        
+        # Then create the main interface
+        self.create_main_interface()
+        
         self.templates = self.load_default_templates()
         
         self.template_names = [f"{t.course_code}: {t.title}" for t in self.templates]
         self.template_combo['values'] = ["Clear Template"] + self.template_names
 
+        
     def load_default_templates(self):
         """Load a single default template for testing purposes"""
         try:
@@ -493,22 +499,38 @@ class HistorySyllabusGenerator:
 
     def create_action_buttons(self):
         """Create action buttons at the bottom of the interface"""
-        action_frame = ttk.Frame(self.main_container)
-        action_frame.pack(fill=tk.X, padx=5, pady=10)
+        # Create a frame at the bottom that will stay fixed
+        # Use self.root (window) directly instead of main_container
+        self.action_frame = tk.Frame(self.root, bg="#f0f0f0")  
+        self.action_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=10)
+        
+        # Add a separator above the action frame to visually separate it
+        separator = ttk.Separator(self.root, orient='horizontal')
+        separator.pack(side=tk.BOTTOM, fill=tk.X, before=self.action_frame)
 
         # Generate syllabus button (Word)
         gen_syllabus_btn = ttk.Button(
-            action_frame, text="Generate Syllabus (Word)", style="Action.TButton",
+            self.action_frame, text="Generate Syllabus (Word)", style="Action.TButton",
             command=lambda: self.generate_syllabus(export_format="docx")
         )
         gen_syllabus_btn.pack(side=tk.RIGHT, padx=5)
 
         # Generate PDF button
         gen_pdf_btn = ttk.Button(
-            action_frame, text="Generate Syllabus (PDF)", style="Action.TButton",
+            self.action_frame, text="Generate Syllabus (PDF)", style="Action.TButton",
             command=lambda: self.generate_syllabus(export_format="pdf")
         )
         gen_pdf_btn.pack(side=tk.RIGHT, padx=5)
+        
+        # Optional: Add save/load project buttons on the left side
+        project_frame = ttk.Frame(self.action_frame)
+        project_frame.pack(side=tk.LEFT, padx=5)
+        
+        save_project_btn = ttk.Button(
+            project_frame, text="Save Project", style="Action.TButton",
+            command=self.save_template  # Using existing save_template method
+        )
+        save_project_btn.pack(side=tk.LEFT, padx=5)
 
     def create_scrollable_frame(self, parent):
         """Create a scrollable frame within the given parent"""
@@ -765,6 +787,15 @@ class HistorySyllabusGenerator:
                   command=self.export_schedule,
                   style="Action.TButton").pack(side=tk.LEFT, padx=5)
         
+        # Add to the buttons_frame in create_schedule_tab method:
+        # Update the button text in create_schedule_tab method:
+        example_csv_btn = ttk.Button(
+            buttons_frame, text="Save CSV Template Example", 
+            command=self.export_schedule_example,
+            style="Action.TButton"
+        )
+        example_csv_btn.pack(side=tk.LEFT, padx=5)
+        
         # Right side helper text
         ttk.Label(controls_frame, text="Use [P] to mark primary sources", 
                   style="Italic.TLabel").pack(side=tk.RIGHT)
@@ -863,11 +894,6 @@ class HistorySyllabusGenerator:
         italic_btn = ttk.Button(toolbar, text="I", width=2, command=lambda: insert_markup("italic"))
         italic_btn.pack(side=tk.LEFT, padx=(0, 2))
         link_btn = ttk.Button(toolbar, text="🔗", width=2, command=lambda: insert_markup("link"))
-        link_btn.pack(side=tk.LEFT, padx=(0, 2))
-        ttk.Label(toolbar, text="(Use toolbar or Markdown: *italic* **bold** [text](url))", font=("Arial", 8, "italic")).pack(side=tk.LEFT, padx=8)
-
-        self.materials_text = scrolledtext.ScrolledText(materials_frame, width=60, height=4, wrap=tk.WORD)
-        self.materials_text.pack(fill=tk.X, padx=5, pady=5)
         
         fee_frame = ttk.Frame(materials_frame)
         fee_frame.pack(fill=tk.X, padx=5, pady=5)
@@ -1106,25 +1132,6 @@ class HistorySyllabusGenerator:
         self.extra_credit_var.trace_add('write', update_extra_credit)
         self.extra_combo.bind('<<ComboboxSelected>>', lambda e: update_extra_credit())
 
-    def create_action_buttons(self):
-        """Create action buttons at the bottom of the interface"""
-        action_frame = ttk.Frame(self.main_container)
-        action_frame.pack(fill=tk.X, padx=5, pady=10)
-
-
-        # Generate syllabus button (Word)
-        gen_syllabus_btn = ttk.Button(
-            action_frame, text="Generate Syllabus (Word)", style="Action.TButton",
-            command=lambda: self.generate_syllabus(export_format="docx")
-        )
-        gen_syllabus_btn.pack(side=tk.RIGHT, padx=5)
-        # Generate PDF button
-        gen_pdf_btn = ttk.Button(
-            action_frame, text="Generate Syllabus (PDF)", style="Action.TButton",
-            command=lambda: self.generate_syllabus(export_format="pdf")
-        )
-        gen_pdf_btn.pack(side=tk.RIGHT, padx=5)
-        
     def add_ta(self):
         """Add a new TA entry"""
         frame = ttk.Frame(self.ta_container)
@@ -1765,6 +1772,43 @@ class HistorySyllabusGenerator:
             df = pd.DataFrame(data)
             df.to_excel(file_path, index=False)
             
+    def export_schedule_example(self):
+        """Create an example CSV schedule file to show proper format"""
+        # Define example data with clear formatting examples
+        example_data = [
+            ["Date", "Topic", "Readings/Preparation", "Work Due"],
+            ["January 10, 2025", "Introduction to Course", "Syllabus [1000 words]", "None"],
+            ["January 17, 2025", "The Progressive Era", "American Yawp, Ch. 20 [8400 words]\nTheodore Roosevelt, 'The New Nationalism' [P]", "Reading Response #1"],
+            ["January 24, 2025", "World War I", "American Yawp, Ch. 21 [8750 words]\nWoodrow Wilson, 'War Message to Congress' [P]", "Paper Proposal Due"],
+            ["January 31, 2025", "The 1920s", "American Yawp, Ch. 22 [7800 words]\nF. Scott Fitzgerald, excerpt from The Great Gatsby [P]", "Discussion Post"],
+            ["February 7, 2025", "Great Depression", "American Yawp, Ch. 23 [8200 words]\nFDR, First Inaugural Address [P]", "Reading Response #2"]
+        ]
+        
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".csv",
+            filetypes=[("CSV files", "*.csv")],
+            title="Save Example Schedule CSV"
+        )
+        
+        if not file_path:
+            return
+        
+        try:
+            import csv
+            with open(file_path, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerows(example_data)
+            
+            messagebox.showinfo("Success", 
+                "Example schedule CSV template has been saved to:\n\n"
+                f"{file_path}\n\n"
+                "Please use this file as a template/guideline when creating your own schedule.\n"
+                "You can edit it directly in Excel or any spreadsheet program, then import it back "
+                "using the 'Import Schedule' button.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save example: {str(e)}")
+        
+                
     def generate_pdf(self, export_path, content):
         """Generate PDF directly using ReportLab"""
         # Configure the PDF document with proper page setup
@@ -2394,7 +2438,9 @@ class HistorySyllabusGenerator:
             
             # Accommodations policy
             doc.add_heading("Students requiring accommodation", level=2)
-            doc.add_paragraph(accommodations_default)
+            p = doc.add_paragraph("Students with disabilities who experience learning barriers and would like to request academic accommodations should connect with the Disability Resource Center by visiting ")
+            add_hyperlink(p, "https://disability.ufl.edu/students/get-started/", "https://disability.ufl.edu/students/get-started/")
+            p.add_run(". It is important for students to share their accommodation letter with the instructor and discuss their access needs as early as possible in the semester.")
             
             # University Honesty Policy
             doc.add_heading("University Honesty Policy", level=2)
@@ -2413,12 +2459,18 @@ class HistorySyllabusGenerator:
             # Campus Resources (if enabled)
             if self.campus_resources_var.get():
                 doc.add_heading("Campus Resources", level=2)
-                doc.add_paragraph(campus_resources_default)
-            
+                campus_resources_paras = campus_resources_default.split("\n\n")
+                for para_text in campus_resources_paras:
+                    p = doc.add_paragraph()
+                    process_text_with_hyperlinks(p, para_text)
+
             # Academic Resources (if enabled)
             if self.academic_resources_var.get():
                 doc.add_heading("Academic Resources", level=2)
-                doc.add_paragraph(academic_resources_default)
+                academic_resources_paras = academic_resources_default.split("\n\n")
+                for para_text in academic_resources_paras:
+                    p = doc.add_paragraph()
+                    process_text_with_hyperlinks(p, para_text)
             
             # VI. Course Schedule (Calendar)
             doc.add_heading("VI. Calendar", level=1)
@@ -2912,7 +2964,7 @@ class HistorySyllabusGenerator:
                     header_row.columnconfigure(i, weight=1)
                 
                 # Table content rows
-                row_idx = 0
+                row_idx = 1
                 for category, entries in self.learning_objectives_entries.items():
                     # Skip entries that were removed
                     if 'frame' in entries and not entries['frame'].winfo_exists():
@@ -3392,9 +3444,9 @@ class HistorySyllabusGenerator:
 
     def create_main_interface(self):
         """Create the main interface for the application"""
-        # Create a main container frame
+        # Create a main container frame that fits above the action buttons
         self.main_container = ttk.Frame(self.root)
-        self.main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.main_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=(10, 60))  # Add extra padding at the bottom
 
         # Add a frame for the template dropdown at the top
         template_frame = ttk.Frame(self.main_container)
@@ -3412,9 +3464,9 @@ class HistorySyllabusGenerator:
         self.template_combo.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
         self.template_combo.bind("<<ComboboxSelected>>", self.on_template_selected)
 
-        # Create a notebook (tabbed interface)
+        # Create a notebook (tabbed interface) - make sure it doesn't push buttons off screen
         self.notebook = ttk.Notebook(self.main_container)
-        self.notebook.pack(fill=tk.BOTH, expand=True)
+        self.notebook.pack(fill=tk.BOTH, expand=True, pady=(0, 50))  # Add bottom padding for buttons
 
         # --- Add tabs in the order requested, with "Required" indicator ---
         # 1. Course Info (Required)
@@ -3729,6 +3781,72 @@ class HistorySyllabusGenerator:
         text_widget.insert(tk.END, explanation)
         text_widget.config(state=tk.DISABLED)  # Make the text read-only
         text_widget.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+def add_hyperlink(paragraph, text, url):
+    """Add a hyperlink to a paragraph."""
+    # This gets the relationship ID for the hyperlink
+    part = paragraph.part
+    r_id = part.relate_to(url, docx.opc.constants.RELATIONSHIP_TYPE.HYPERLINK, is_external=True)
+    
+    # Create the hyperlink element
+    hyperlink = docx.oxml.shared.OxmlElement('w:hyperlink')
+    hyperlink.set(docx.oxml.shared.qn('r:id'), r_id)
+    
+    # Create a new run
+    new_run = docx.oxml.shared.OxmlElement('w:r')
+    rPr = docx.oxml.shared.OxmlElement('w:rPr')
+    
+    # Add color and underline to the run
+    c = docx.oxml.shared.OxmlElement('w:color')
+    c.set(docx.oxml.shared.qn('w:val'), '0000FF')  # Blue color
+    rPr.append(c)
+    
+    u = docx.oxml.shared.OxmlElement('w:u')
+    u.set(docx.oxml.shared.qn('w:val'), 'single')  # Single underline
+    rPr.append(u)
+    
+    new_run.append(rPr)
+    new_run.text = text
+    hyperlink.append(new_run)
+    paragraph._p.append(hyperlink)
+    
+    return hyperlink
+
+def process_text_with_hyperlinks(paragraph, text):
+    """Process text containing URLs and convert them to hyperlinks"""
+    import re
+    
+    # Better regex patterns
+    url_pattern = re.compile(r'(https?://[^\s\'"<>]+[^\s\'"<>.,;:])')
+    email_pattern = re.compile(r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})')
+    
+    # Process URLs first
+    url_parts = url_pattern.split(text)
+    result_parts = []
+    
+    for part in url_parts:
+        if url_pattern.match(part):
+            # This is a URL
+            try:
+                add_hyperlink(paragraph, part, part)
+            except Exception as e:
+                # Fallback to plain text if hyperlink creation fails
+                paragraph.add_run(part)
+        else:
+            # Process emails in non-URL text
+            email_parts = email_pattern.split(part)
+            for email_part in email_parts:
+                if email_pattern.match(email_part):
+                    # This is an email
+                    try:
+                        add_hyperlink(paragraph, email_part, f"mailto:{email_part}")
+                    except Exception as e:
+                        # Fallback to plain text
+                        paragraph.add_run(email_part)
+                else:
+                    # Regular text
+                    if email_part.strip():
+                        paragraph.add_run(email_part)
 
 if __name__ == "__main__":
     app = HistorySyllabusGenerator()
