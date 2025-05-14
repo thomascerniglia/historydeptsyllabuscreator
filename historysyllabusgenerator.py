@@ -106,9 +106,8 @@ evaluations_default = (
 )
 
 conflict_resolution_default = (
-    "Any classroom issues, disagreements, or grade disputes should first be discussed between the student and instructor. "
-    "If the problem cannot be resolved, please contact the Associate Chair of the History Department. Be prepared to provide documentation of the issue and all graded materials. "
-    "Unresolved issues may be referred to the University Ombuds Office or the Dean of Students Office for further resolution."
+    "Any classroom issues, disagreements or grade disputes should be discussed first between the instructor and the student. "
+    "If the problem cannot be resolved, please contact Nina Caputo (Associate Chair) "
 )
 
 campus_resources_default = """U Matter, We Care: If you or someone you know is in distress, please contact umatter@ufl.edu, 352-392-1575, or visit U Matter, We Care website to refer or report a concern and a team member will reach out to the student in distress.
@@ -135,10 +134,10 @@ academic_resources_default = """E-learning technical support: Contact the UF Com
 Career Connections Center: Reitz Union Suite 1300, 352-392-1601. Career assistance and counseling services.  
 
 Library Support: Various ways to receive assistance with respect to using the libraries or finding resources.  
+ 
+Teaching Center: Broward Hall, 352-392-2010 or to make an appointment 352- 392-6420. General study skills and tutoring.      
 
-Teaching Center: Broward Hall, 352-392-2010 or to make an appointment 352- 392-6420. General study skills and tutoring.  
-
-Writing Studio: 2215 Turlington Hall, 352-846-1138. Help brainstorming, formatting, and writing papers.  
+Writing Studio: 2215 Turlington Hall, 352-846-1138. Help brainstorming, formatting, and writing papers.       
 
 Student Complaints On-Campus: Visit the Student Honor Code and Student Conduct Code webpage for more information.  
 
@@ -2039,7 +2038,17 @@ class HistorySyllabusGenerator:
                 p.paragraph_format.left_indent = Inches(0.25)  # Reduced indentation
                 p.paragraph_format.space_after = Pt(0)  # Remove spacing after paragraphs
                 p.add_run(f"{label} ").bold = True
-                p.add_run(value)
+                
+                if label == "Email:":
+                    # Add email as mailto hyperlink
+                    try:
+                        add_hyperlink(p, value, f"mailto:{value}")
+                    except Exception:
+                        # Fallback to plain text if hyperlink creation fails
+                        p.add_run(value)
+                else:
+                    # Other fields remain as plain text
+                    p.add_run(value)
             
             # Teaching Assistants - compact format
             if self.ta_entries:
@@ -2052,11 +2061,19 @@ class HistorySyllabusGenerator:
                     p.paragraph_format.space_after = Pt(0)
                     p.add_run("Name: ").bold = True
                     p.add_run(ta[0].get())
+                    
                     p = doc.add_paragraph()
                     p.paragraph_format.left_indent = Inches(0.25)
                     p.paragraph_format.space_after = Pt(0)
                     p.add_run("Email: ").bold = True
-                    p.add_run(ta[1].get())
+                    
+                    # Add email as mailto hyperlink
+                    try:
+                        add_hyperlink(p, ta[1].get(), f"mailto:{ta[1].get()}")
+                    except Exception:
+                        # Fallback to plain text
+                        p.add_run(ta[1].get())
+                        
                     p = doc.add_paragraph()
                     p.paragraph_format.left_indent = Inches(0.25)
                     p.paragraph_format.space_after = Pt(0)
@@ -2088,8 +2105,9 @@ class HistorySyllabusGenerator:
             
             # Course Objectives - Add this section (moved after General Education)
             doc.add_heading("Course Objectives", level=1)
-            doc.add_paragraph("All General Education area objectives can be found here.")
-            doc.add_paragraph(f"The {self.entry_course_num.get()} curriculum will also cover the following course-specific objectives:")
+            p = doc.add_paragraph("All General Education area objectives can be found ")
+            add_hyperlink(p, "here", "https://undergrad.aa.ufl.edu/general-education/gen-ed-program/subject-area-objectives/")
+            p.add_run(".")
             
             if hasattr(self, 'objective_entries') and any(obj["entry"].get().strip() for obj in self.objective_entries):
                 for i, obj in enumerate(self.objective_entries, 1):
@@ -2349,26 +2367,39 @@ class HistorySyllabusGenerator:
             
             # Add UF grading policies note
             p = doc.add_paragraph()
-            p.add_run("See the UF Catalog's \"Grades and Grading Policies\" for information on how UF assigns grade points.")
-            
+            p.add_run("See the UF Catalog’s ") 
+            add_hyperlink(p,"Grades and Grading Policies", "https://catalog.ufl.edu/UGRD/academic-regulations/grades-grading-policies/")
+            p.add_run(" for information on how UF assigns grade points.")
+
+
             # Add minimum grade note
             p = doc.add_paragraph()
             p.add_run("Note: A minimum grade of C is required to earn General Education credit.")
             
+            # Add University Assessment Policy if checked
+            if hasattr(self, 'assessment_policy_var') and self.assessment_policy_var.get():
+                doc.add_heading("University Assessment Policies", level=2)
+                p = doc.add_paragraph()
+                p.add_run("Requirements for make-up exams, assignments, and other work in this course are consistent with university policies that can be found in the ")
+                add_hyperlink(p, "Catalog", "https://catalog.ufl.edu/ugrad/current/regulations/info/attendance.aspx")
+                p.add_run(".")
+
             # Instructions for Submitting Written Assignments
             doc.add_heading("Instructions for Submitting Written Assignments", level=1)
             doc.add_paragraph("All written assignments must be submitted as Word documents (.doc or .docx) through the \"Assignments\" portal in Canvas by the specified deadlines. Do NOT send assignments as PDF files.")
             
-            # Add University Assessment Policy if checked
-            if hasattr(self, 'assessment_policy_var') and self.assessment_policy_var.get():
-                doc.add_heading("University Assessment Policies", level=2)
-                doc.add_paragraph("Requirements for make-up exams, assignments, and other work in this course are consistent with university policies that can be found in the Catalog.")
-            
             # Add Extensions & Make-Up Exams if checked
             if hasattr(self, 'extensions_policy_var') and self.extensions_policy_var.get():
                 doc.add_heading("Extensions & Make-Up Exams", level=2)
-                doc.add_paragraph("Only the professor can authorize an extension or make-up exam, and all requests must be supported by documentation from a medical provider, Student Health Services, the Disability Resource Center, or the Dean of Students Office. Requirements for attendance and make-up exams, assignments, and other work in this course are consistent with university policies: https://catalog.ufl.edu/ugrad/current/regulations/info/attendance.aspx")
-            
+                p = doc.add_paragraph()
+                extensions_text = (
+                    "Only the professor can authorize an extension or make-up exam, and all requests must be "
+                    "supported by documentation from a medical provider, Student Health Services, the Disability Resource Center, "
+                    "or the Dean of Students Office. Requirements for attendance and make-up exams, assignments, and other work "
+                    "in this course are consistent with university policies: https://catalog.ufl.edu/ugrad/current/regulations/info/attendance.aspx"
+                )
+                process_text_with_hyperlinks(p, extensions_text)
+
             # Add Late Submissions policy
             doc.add_heading("Late Submissions", level=2)
             if hasattr(self, 'late_policy_text') and self.late_policy_text.get("1.0", tk.END).strip():
@@ -2418,6 +2449,7 @@ class HistorySyllabusGenerator:
             
             # IV. Evaluations section
             doc.add_heading("IV. Evaluations", level=1)
+            p = doc.add_paragraph()
             eval_text = (
                 "UF course evaluation process\n"
                 "Students are expected to provide professional and respectful feedback on the quality of "
@@ -2431,20 +2463,41 @@ class HistorySyllabusGenerator:
                 "period opens. Summaries of course evaluation results are available to students at "
                 "https://gatorevals.aa.ufl.edu/public-results/."
             )
-            doc.add_paragraph(eval_text)
+            process_text_with_hyperlinks(p, eval_text)
             
             # V. University Policies and Resources
             doc.add_heading("V. University Policies and Resources", level=1)
             
             # Accommodations policy
             doc.add_heading("Students requiring accommodation", level=2)
-            p = doc.add_paragraph("Students with disabilities who experience learning barriers and would like to request academic accommodations should connect with the Disability Resource Center by visiting ")
-            add_hyperlink(p, "https://disability.ufl.edu/students/get-started/", "https://disability.ufl.edu/students/get-started/")
-            p.add_run(". It is important for students to share their accommodation letter with the instructor and discuss their access needs as early as possible in the semester.")
-            
+            p = doc.add_paragraph()
+            accommodations_text = (
+                "Students with disabilities who experience learning barriers and would like to request academic accommodations "
+                "should connect with the Disability Resource Center by visiting https://disability.ufl.edu/students/get-started/. "
+                "It is important for students to share their accommodation letter with the instructor and discuss their "
+                "access needs as early as possible in the semester."
+            )
+            process_text_with_hyperlinks(p, accommodations_text)
+
             # University Honesty Policy
             doc.add_heading("University Honesty Policy", level=2)
-            doc.add_paragraph(honesty_plagiarism_default)
+            p = doc.add_paragraph()
+            p.add_run("UF students are bound by The Honor Pledge which states “We, the members of the University of Florida community, pledge to hold ourselves and our peers to the highest standards of honor and integrity by abiding by the Honor Code. " \
+            "On all work submitted for credit by students at the University of Florida, the following pledge is either required or implied: " \
+            "“On my honor, I have neither given nor received unauthorized aid in doing this assignment.” " \
+            "The Conduct Code specifies a number of behaviors that are in violation of this code and the possible sanctions.")
+            add_hyperlink(p, " See the UF Conduct Code website for more information", "https://sccr.dso.ufl.edu/process/student-conduct-code/")
+            p.add_run(". If you have any questions or concerns, please consult with the instructor or TAs in this class.")
+
+            doc.add_heading("Plagiarism and Related Ethical Violations ", level=2)
+            p = doc.add_paragraph()
+            p.add_run("Ethical violations such as plagiarism, cheating, academic misconduct (e.g. passing off others’ work as your own, reusing old assignments, etc.) " \
+            "will not be tolerated and will result in a failing grade in this course. Students must be especially wary of plagiarism. " \
+            "The UF Student Honor Code defines plagiarism as follows: "
+            "A student shall not represent as the student’s own work all or any portion of the work of another. "
+            "Plagiarism includes (but is not limited to): a. Quoting oral or written materials, whether published or unpublished, without proper attribution. "
+            "b. Submitting a document or assignment which in whole or in part is identical or substantially identical to a document or assignment not authored by the student."
+            " Note that plagiarism also includes the use of any artificial intelligence programs, such as ChatGPT. ")
             
             # In-class recording policy (if enabled)
             if hasattr(self, 'in_class_recording_var') and self.in_class_recording_var.get():
@@ -2454,23 +2507,124 @@ class HistorySyllabusGenerator:
             # Conflict resolution (if enabled)
             if hasattr(self, 'conflict_resolution_var') and self.conflict_resolution_var.get():
                 doc.add_heading("Procedure for conflict resolution", level=2)
-                doc.add_paragraph(conflict_resolution_default)
+                p = doc.add_paragraph()
+                p.add_run("Any classroom issues, disagreements or grade disputes should be discussed first between the instructor and the student. ")
+                p.add_run("If the problem cannot be resolved, please contact Nina Caputo (Associate Chair) (")
+                add_hyperlink(p, "ncaputo@ufl.edu", "mailto:ncaputo@ufl.edu")
+                p.add_run(", 352-273-3379). ")
+                p.add_run("Be prepared to provide documentation of the problem, as well as all graded materials for the semester. ")
+                p.add_run("Issues that cannot be resolved departmentally will be referred to the University Ombuds Office (")
+                add_hyperlink(p,"http://www.ombuds.ufl.edu", "http://www.ombuds.ufl.edu")
+                p.add_run("; 352-392-1308) or the Dean of Students Office (")
+                add_hyperlink(p, "http://www.dso.ufl.edu", "http://www.dso.ufl.edu")
+                p.add_run("; 352-392-1261).")
             
             # Campus Resources (if enabled)
             if self.campus_resources_var.get():
                 doc.add_heading("Campus Resources", level=2)
-                campus_resources_paras = campus_resources_default.split("\n\n")
-                for para_text in campus_resources_paras:
-                    p = doc.add_paragraph()
-                    process_text_with_hyperlinks(p, para_text)
+                
+                # U Matter, We Care
+                p = doc.add_paragraph()
+                p.add_run("U Matter, We Care: ")
+                p.add_run("If you or someone you know is in distress, please contact ")
+                add_hyperlink(p, "umatter@ufl.edu", "mailto:umatter@ufl.edu"), 
+                p.add_run(" 352-392-1575, or visit ")
+                add_hyperlink(p, "U Matter, We Care website", "https://umatter.ufl.edu/")
+                p.add_run(", to refer or report a concern and a team member will reach out to the student in distress.")
 
+                # Counseling and Wellness Center
+                p = doc.add_paragraph()
+                p.add_run("Counseling and Wellness Center: ")
+                p.add_run("Visit the ") 
+                add_hyperlink(p, "Counseling and Wellness Center website", "https://counseling.ufl.edu/") 
+                p.add_run(" or call 352-392-1575 for information on crisis services as well as non-crisis services.")
+                
+                # Student Health Care Center
+                p = doc.add_paragraph()
+                p.add_run("Student Health Care Center: ")
+                p.add_run("Call 352-392-1161 for 24/7 information to help you find the care you need, or visit the ")
+                add_hyperlink(p, "Student Health Care Center website", "https://shcc.ufl.edu/")
+                p.add_run(".")
+                
+                # University Police Department
+                p = doc.add_paragraph()
+                p.add_run("University Police Department: ")
+                p.add_run("Visit ")
+                add_hyperlink(p, "UF Police Department website", "https://police.ufl.edu/") 
+                p.add_run(" or call 352-392-1111 (or 9-1-1 for emergencies).")
+                
+                # UF Health Shands Emergency Room
+                p = doc.add_paragraph()
+                p.add_run("UF Health Shands Emergency Room / Trauma Center: ")
+                p.add_run("For immediate medical care call 352-733-0111 or go to the emergency room at 1515 SW Archer Road, Gainesville, FL 32608; Visit the ")
+                add_hyperlink(p, "UF Health Emergency Room and Trauma Center website", "https://ufhealth.org/emergency-room-trauma-center")
+                p.add_run(".")
+                
+                # GatorWell Health Promotion Services
+                p = doc.add_paragraph()
+                p.add_run("GatorWell Health Promotion Services: ")
+                p.add_run("For prevention services focused on optimal wellbeing, including Wellness Coaching for Academic Success, visit the ")
+                add_hyperlink(p, "GatorWell website", "https://gatorwell.ufsa.ufl.edu/")
+                p.add_run(" or call 352-273-4450.") 
+                
+                # Student Success Initiative
+                p = doc.add_paragraph()
+                p.add_run("Student Success Initiative, ")
+                add_hyperlink(p, "https://studentsuccess.ufl.edu/", "https://studentsuccess.ufl.edu")
+                
+                # Field and Fork Pantry
+                p = doc.add_paragraph()
+                add_hyperlink(p, "Field and Fork Pantry", "https://pantry.fieldandfork.ufl.edu/")
+                p.add_run(". Food and toiletries for students experiencing food insecurity.")
+                
+                # Dean of Students Office
+                p = doc.add_paragraph()
+                add_hyperlink(p, "Dean of Students Office", "https://care.dso.ufl.edu/")
+                p.add_run(". 202 Peabody Hall, 392-1261. Among other services, the DSO assists students who are experiencing situations that compromises their ability to attend classes. This includes family emergencies and medical issues (including mental health crises).")
+            
             # Academic Resources (if enabled)
             if self.academic_resources_var.get():
                 doc.add_heading("Academic Resources", level=2)
-                academic_resources_paras = academic_resources_default.split("\n\n")
-                for para_text in academic_resources_paras:
-                    p = doc.add_paragraph()
-                    process_text_with_hyperlinks(p, para_text)
+                
+                #Career Connections Cernter
+                p = doc.add_paragraph()
+                add_hyperlink(p, "Career Connections Center", "https://career.ufl.edu/")
+                p.add_run(": Reitz Union Suite 1300, 352-392-1601. Career assistance and counseling services.  ")
+
+                # E-learning support
+                p = doc.add_paragraph()
+                p.add_run("E-learning technical support: Contact the ") 
+                add_hyperlink(p, "UF Computing Help Desk", "http://helpdesk.ufl.edu/")
+                p.add_run(" at 352-392-4357 or via e-mail at ")
+                add_hyperlink(p, "helpdesk@ufl.edu", "mailto:helpdesk@ufl.edu")
+                p.add_run(".")
+                
+                # Library Support
+                p = doc.add_paragraph()
+                add_hyperlink(p, "Library Support", "https://cms.uflib.ufl.edu/ask")
+                p.add_run(": Various ways to receive assistance with respect to using the libraries or finding resources.")
+                
+                # Teaching Center
+                p = doc.add_paragraph()
+                add_hyperlink(p, "Teaching Center", "https://teachingcenter.ufl.edu/")
+                p.add_run(": Broward Hall, 352-392-2010 or to make an appointment 352-392-6420. General study skills and tutoring.")
+                
+                # Writing Studio
+                p = doc.add_paragraph()
+                add_hyperlink(p, "Writing Studio", "https://writing.ufl.edu/writing-studio/")
+                p.add_run(": 2215 Turlington Hall, 352-846-1138. Help brainstorming, formatting, and writing papers.")
+                
+                # Student Complaints On-Campus
+                p = doc.add_paragraph()
+                p.add_run("Student Complaints On-Campus: Visit the ")
+                add_hyperlink(p, "Student Honor Code and Student Conduct Code webpage", "https://sccr.dso.ufl.edu/policies/student-honor-%20code-student-conduct-code/")
+                p.add_run(" for more information.")
+                
+                # On-Line Students Complaints
+                p = doc.add_paragraph()
+                p.add_run("On-Line Students Complaints: View the ")
+                add_hyperlink(p, "Distance Learning Student Complaint Process", "https://distance.ufl.edu/getting-help/student-complaint-process/")
+                p.add_run(".")
             
             # VI. Course Schedule (Calendar)
             doc.add_heading("VI. Calendar", level=1)
@@ -2893,6 +3047,15 @@ class HistorySyllabusGenerator:
             
             # Course Objectives
             self._add_preview_section(content_container, "Course Objectives", 12, "bold")
+            objectives_link_frame = ttk.Frame(content_container, style="Preview.TFrame")
+            objectives_link_frame.pack(fill=tk.X, pady=2)
+            self._add_preview_text(objectives_link_frame, "All General Education area objectives can be found ", end="")
+            link_label = ttk.Label(objectives_link_frame, text="here", foreground="blue", cursor="hand2", 
+                                  font=("Times New Roman", 10, "underline"))
+            link_label.pack(side=tk.LEFT)
+            link_label.bind("<Button-1>", lambda e: webbrowser.open("https://undergrad.aa.ufl.edu/general-education/gen-ed-program/subject-area-objectives/"))
+            self._add_preview_text(objectives_link_frame, ".", start="")
+            
             objectives_frame = ttk.Frame(content_container, style="Preview.TFrame")
             objectives_frame.pack(fill=tk.X, padx=10, pady=2)
             for i, obj in enumerate(self.objective_entries, 1):
@@ -3134,8 +3297,9 @@ class HistorySyllabusGenerator:
             # Add University Assessment Policy if checked
             if hasattr(self, 'assessment_policy_var') and self.assessment_policy_var.get():
                 self._add_preview_section(content_container, "University Assessment Policies", 11, "bold")
-                self._add_preview_text(content_container, "Requirements for make-up exams, assignments, and other work in this course are consistent with university policies that can be found in the Catalog.")
-
+                assessment_text = "Requirements for make-up exams, assignments, and other work in this course are consistent with university policies that can be found in the Catalog."
+                self._add_preview_text(content_container, assessment_text)
+                
             # Add Instructions for Submitting Written Assignments section
             self._add_preview_section(content_container, "Instructions for Submitting Written Assignments", 12, "bold")
             self._add_preview_text(content_container, "All written assignments must be submitted as Word documents (.doc or .docx) through the \"Assignments\" portal in Canvas by the specified deadlines. Do NOT send assignments as PDF files.")
@@ -3334,14 +3498,31 @@ class HistorySyllabusGenerator:
         
         return field_frame
 
-    def _add_preview_text(self, parent, text, bold=False, indent=0, pady=2):
-        """Add plain text to the preview"""
+    def _add_preview_text(self, parent, text, bold=False, indent=0, pady=2, end=None, start=None):
+        """
+        Add plain text to the preview
+        
+        Parameters:
+        - parent: parent widget
+        - text: text to display
+        - bold: whether to bold the text
+        - indent: left indent in pixels
+        - pady: vertical padding
+        - end: if set to "", don't add newline at end (pack with side=tk.LEFT)
+        - start: if set to "", continue on same line (pack with side=tk.LEFT)
+        """
         text_widget = ttk.Label(parent, text=text,
                                 font=("Times New Roman", 10, bold and "bold" or "normal"),
                                 background="white",
                                 justify=tk.LEFT,
                                 wraplength=600)
-        text_widget.pack(anchor="w", padx=indent, pady=pady, fill=tk.X)
+        
+        # Determine how to pack the widget based on end/start parameters
+        if end == "" or start == "":
+            text_widget.pack(side=tk.LEFT, padx=indent, pady=pady)
+        else:
+            text_widget.pack(anchor="w", padx=indent, pady=pady, fill=tk.X)
+        
         return text_widget
 
     def on_tab_changed(self, event):
