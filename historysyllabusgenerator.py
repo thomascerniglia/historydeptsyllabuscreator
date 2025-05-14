@@ -93,11 +93,29 @@ accommodations_default = (
 )
 
 canvas_policy_default = (
-    "-Replace with your Canvas Policies-"
+    "Class announcements will be made through Canvas, and all papers must be turned in via Canvas. "
+    "Class handouts, lecture slides, assignment rubrics, readings, study guides, a writing sample, and a copy of this syllabus are on our Canvas site. "
+    "Check your Canvas inbox daily, and read all Canvas announcements."
 )
 
 technology_policy_default = (
-    "-Replace with your Technology Policies-"
+    "To respect a wide range of learning styles, I will permit the use of tablets and laptops in class so long as they do not distract you or your fellow students. "
+    "However, abuses of this technology policy will be taken seriously. Students disrupting the lecture may be asked to leave, and anyone caught using tablets "
+    "or laptops for purposes unrelated to the course during a discussion section will receive an unexcused absence and a failing participation grade for that meeting. "
+    "No computers or laptops are allowed on exam days, and those who repeatedly violate the technology policy will be barred from bringing laptops and tablets to class. "
+    "Cellphones should be on vibrate. "
+)
+
+assignment_support_default = (
+    "You are welcome to come to regular office hours or to schedule an individual appointment with your professor or TA. "
+    "When needed, I also encourage you to seek support from the academic resources listed on this syllabus. "
+)
+
+class_communication_policy_default = (
+    "The best way to get in contact with your professor or TA is through our UF emails, listed on the front page of the syllabus. "
+    "We will do our best to reply within one business day, but there may be periods when we are slower to respond due to high email volume. "
+    "Please also note that we will not answer emails at night, over weekends, or during university-scheduled holidays. "
+    "Finally, when you email the professor, please carbon copy (cc) your TA to streamline communication."
 )
 
 evaluations_default = (
@@ -181,12 +199,22 @@ class HistorySyllabusGenerator:
         self.campus_resources_var = tk.BooleanVar(value=True)
         self.academic_resources_var = tk.BooleanVar(value=True)
         self.late_work_var = tk.BooleanVar(value=True)
+        self.late_submissions_policy_var = tk.BooleanVar(value=True)
+        self.extra_credit_policy_var = tk.BooleanVar(value=True)
+        self.canvas_policy_var = tk.BooleanVar(value=True)
+        self.technology_policy_var = tk.BooleanVar(value=True)
+        self.communication_policy_var = tk.BooleanVar(value=True)
         self.optional_policies = {
             "in_class_recording": self.in_class_recording_var,
             "conflict_resolution": self.conflict_resolution_var,
             "campus_resources": self.campus_resources_var,
             "academic_resources": self.academic_resources_var,
-            "late_work": self.late_work_var
+            "late_work": self.late_work_var,
+            "late_submissions": self.late_submissions_policy_var,
+            "extra_credit": self.extra_credit_policy_var,
+            "canvas": self.canvas_policy_var,
+            "technology": self.technology_policy_var,
+            "communication": self.communication_policy_var
         }
         
         # Create action frame FIRST before main_container
@@ -490,6 +518,11 @@ class HistorySyllabusGenerator:
                 "academic_resources": True,
                 "late_work": True
             }
+            # Add these policies to the AMH2020 template
+            amh2020_template.canvas_policy = canvas_policy_default
+            amh2020_template.technology_policy = technology_policy_default
+            amh2020_template.communication_policy = class_communication_policy_default
+            amh2020_template.support_policy = assignment_support_default
             # Add to templates list
             return [test_template, amh2020_template]
         except Exception as e:
@@ -970,37 +1003,64 @@ class HistorySyllabusGenerator:
         )
         extensions_check.pack(anchor="w", padx=20, pady=2)
         
-        # Canvas Policy section
+        # Canvas Policy checkbox (move above the Canvas Policy entry box)
+        canvas_check = ttk.Checkbutton(
+            frame,
+            text="Include Canvas Policy",
+            variable=self.canvas_policy_var,
+            command=self.update_document_preview
+        )
+        canvas_check.pack(anchor="w", padx=5, pady=2)
+
+        # Canvas Policy entry box
         canvas_frame = ttk.LabelFrame(frame, text="Canvas Policy")
         canvas_frame.pack(fill=tk.X, padx=20, pady=(10, 5))
         
         self.canvas_policy_text = scrolledtext.ScrolledText(canvas_frame, width=60, height=4, wrap=tk.WORD)
         self.canvas_policy_text.pack(fill=tk.X, padx=5, pady=5)
-        self.canvas_policy_text.insert("1.0", "-Replace with your Canvas Policies-")
+        self.canvas_policy_text.insert("1.0", canvas_policy_default)  # Changed from placeholder
         self.add_mousewheel_scrolling(self.canvas_policy_text)
         
         ttk.Label(canvas_frame, text="This will appear under the Extra Credit policy in the syllabus.", 
                  style="Italic.TLabel").pack(anchor="w", padx=5, pady=(0, 5))
         
-        # Technology in the Classroom Policy
+        # Technology Policy checkbox (move above the Technology Policy entry box)
+        technology_check = ttk.Checkbutton(
+            frame,
+            text="Include Technology Policy",
+            variable=self.technology_policy_var,
+            command=self.update_document_preview
+        )
+        technology_check.pack(anchor="w", padx=5, pady=2)
+
+        # Technology Policy entry box
         tech_frame = ttk.LabelFrame(frame, text="Technology in the Classroom Policy")
         tech_frame.pack(fill=tk.X, padx=20, pady=(10, 5))
         
         self.technology_policy_text = scrolledtext.ScrolledText(tech_frame, width=60, height=4, wrap=tk.WORD)
         self.technology_policy_text.pack(fill=tk.X, padx=5, pady=5)
-        self.technology_policy_text.insert("1.0", "-Replace with your Technology Policies-")
+        self.technology_policy_text.insert("1.0", technology_policy_default)  # Changed from placeholder
         self.add_mousewheel_scrolling(self.technology_policy_text)
         
         ttk.Label(tech_frame, text="This will appear after the Canvas policy in the syllabus.", 
                  style="Italic.TLabel").pack(anchor="w", padx=5, pady=(0, 5))
         
-        # Class Communication Policy
+        # Class Communication Policy checkbox (move above the Class Communication Policy entry box)
+        communication_check = ttk.Checkbutton(
+            frame,
+            text="Include Class Communication Policy",
+            variable=self.communication_policy_var,
+            command=self.update_document_preview
+        )
+        communication_check.pack(anchor="w", padx=5, pady=2)
+
+        # Class Communication Policy entry box
         comm_frame = ttk.LabelFrame(frame, text="Class Communication Policy")
         comm_frame.pack(fill=tk.X, padx=20, pady=(10, 5))
         
         self.communication_policy_text = scrolledtext.ScrolledText(comm_frame, width=60, height=4, wrap=tk.WORD)
         self.communication_policy_text.pack(fill=tk.X, padx=5, pady=5)
-        self.communication_policy_text.insert("1.0", "-Replace with your policy of communication with students-")
+        self.communication_policy_text.insert("1.0", class_communication_policy_default)  # Changed from placeholder
         self.add_mousewheel_scrolling(self.communication_policy_text)
         
         ttk.Label(comm_frame, text="This will appear after the Technology policy in the syllabus.", 
@@ -1009,16 +1069,19 @@ class HistorySyllabusGenerator:
         # Optional policies (moved below comm)
         support_check = ttk.Checkbutton(
             frame,
-            text="Assignment Support Outside the Classroom",
+            text="Include Assignment Support Outside the Classroom",
             variable=self.outside_support_var,
             command=self.update_document_preview
         )
-        support_check.pack(anchor="w", padx=20, pady=2)
+        support_check.pack(anchor="w", padx=5, pady=2)
+
+        # Then add the support_frame
         support_frame = ttk.LabelFrame(frame, text="Assignment Support Details")
         support_frame.pack(fill=tk.X, padx=20, pady=(10, 5))
         self.support_text = scrolledtext.ScrolledText(support_frame, width=60, height=4, wrap=tk.WORD)
         self.support_text.pack(fill=tk.X, padx=5, pady=5)
-        self.support_text.insert("1.0", "-Write your policy for assisting students outside of the classroom here-")
+        self.support_text.insert("1.0", assignment_support_default)
+        self.add_mousewheel_scrolling(self.support_text)
         
         # Fixed policies (non-editable) -> Now optional checkboxes
         checkbox_in_class_recording = ttk.Checkbutton(
@@ -1057,6 +1120,15 @@ class HistorySyllabusGenerator:
         checkbox_academic_resources.pack(anchor="w", padx=5, pady=2)
 
         # --- Move Late Submissions Policy Section here ---
+        # Late Submissions Policy checkbox (above the late_frame)
+        late_policy_check = ttk.Checkbutton(
+            frame,
+            text="Include Late Submissions Policy",
+            variable=self.late_submissions_policy_var,
+            command=self.update_document_preview
+        )
+        late_policy_check.pack(anchor="w", padx=5, pady=2)
+
         late_frame = ttk.LabelFrame(frame, text="Late Submissions Policy")
         late_frame.pack(fill=tk.X, padx=20, pady=5)
         ttk.Label(late_frame, text="Late Submissions Policy:").pack(side=tk.LEFT, padx=(0, 5))
@@ -1100,6 +1172,15 @@ class HistorySyllabusGenerator:
         self.late_combo.bind('<<ComboboxSelected>>', lambda e: update_late_policy())
 
         # --- Move Extra Credit Policy Section here ---
+        # Extra Credit Policy checkbox (above the extra_frame)
+        extra_credit_check = ttk.Checkbutton(
+            frame,
+            text="Include Extra Credit Policy",
+            variable=self.extra_credit_policy_var,
+            command=self.update_document_preview
+        )
+        extra_credit_check.pack(anchor="w", padx=5, pady=2)
+
         extra_frame = ttk.LabelFrame(frame, text="Extra Credit Policy")
         extra_frame.pack(fill=tk.X, padx=20, pady=5)
         ttk.Label(extra_frame, text="Extra Credit Policy:").pack(side=tk.LEFT, padx=(0, 5))
@@ -1435,6 +1516,12 @@ class HistorySyllabusGenerator:
                 for policy_name, enabled in template.optional_policies.items():
                     if policy_name in self.optional_policies:
                         self.optional_policies[policy_name].set(enabled)
+
+            # In load_template_content(), add this alongside other policy loading code:
+            if hasattr(template, 'support_policy'):
+                self.support_text.delete("1.0", tk.END)
+                self.support_text.insert("1.0", template.support_policy)
+                
             # Set dropdowns for late submissions and extra credit policy if present in template
             # Do this *after* the widgets are created and visible
             self.root.after(100, self._set_policy_dropdowns, template)
@@ -2401,52 +2488,59 @@ class HistorySyllabusGenerator:
                 process_text_with_hyperlinks(p, extensions_text)
 
             # Add Late Submissions policy
-            doc.add_heading("Late Submissions", level=2)
-            if hasattr(self, 'late_policy_text') and self.late_policy_text.get("1.0", tk.END).strip():
-                doc.add_paragraph(self.late_policy_text.get("1.0", tk.END).strip())
-            elif hasattr(self, 'late_policy_var') and self.late_policy_var.get() in self.late_policies:
-                selected_policy = self.late_policy_var.get()
-                doc.add_paragraph(self.late_policies[selected_policy])
-            else:
-                doc.add_paragraph("Late submission policy not specified.")
+            if (self.late_submissions_policy_var.get() and
+                ((hasattr(self, 'late_policy_text') and 
+                  self.late_policy_text.get("1.0", tk.END).strip() != "") or
+                 (hasattr(self, 'late_policy_var') and 
+                  self.late_policy_var.get() in self.late_policies))):
+                doc.add_heading("Late Submissions", level=2)
+                if hasattr(self, 'late_policy_text') and self.late_policy_text.get("1.0", tk.END).strip():
+                    doc.add_paragraph(self.late_policy_text.get("1.0", tk.END).strip())
+                elif hasattr(self, 'late_policy_var') and self.late_policy_var.get() in self.late_policies:
+                    selected_policy = self.late_policy_var.get()
+                    doc.add_paragraph(self.late_policies[selected_policy])
+                else:
+                    doc.add_paragraph("Late submission policy not specified.")
             
             # Add Extra Credit policy
-            doc.add_heading("Extra Credit", level=2)
-            if hasattr(self, 'extra_credit_text') and self.extra_credit_text.get("1.0", tk.END).strip():
-                doc.add_paragraph(self.extra_credit_text.get("1.0", tk.END).strip())
-            elif hasattr(self, 'extra_credit_var') and self.extra_credit_var.get() in self.extra_credit_policies:
-                selected_policy = self.extra_credit_var.get()
-                doc.add_paragraph(self.extra_credit_policies[selected_policy])
-            else:
-                doc.add_paragraph("Extra credit policy not specified.")
-            
-            # Canvas Policy (always included)
-            doc.add_heading("Canvas", level=2)
-            if hasattr(self, 'canvas_policy_text') and self.canvas_policy_text.get("1.0", tk.END).strip() != "-Replace with your Canvas Policies-":
-                doc.add_paragraph(self.canvas_policy_text.get("1.0", tk.END).strip())
-            else:
-                doc.add_paragraph(canvas_policy_default)
-            
-            # Technology Policy
-            doc.add_heading("Technology in the Classroom", level=2)
-            if hasattr(self, 'technology_policy_text') and self.technology_policy_text.get("1.0", tk.END).strip() != "-Replace with your Technology Policies-":
-                doc.add_paragraph(self.technology_policy_text.get("1.0", tk.END).strip())
-            else:
-                doc.add_paragraph(technology_policy_default)
-            
-            # Communication Policy
-            doc.add_heading("Class Communication Policy", level=2)
-            if hasattr(self, 'communication_policy_text'):
-                doc.add_paragraph(self.communication_policy_text.get("1.0", tk.END).strip())
-            
-            # Add Assignment Support section if enabled
-            if self.outside_support_var.get():
-                doc.add_heading("Assignment Support Outside the Classroom", level=2)
-                if hasattr(self, 'support_text'):
-                    doc.add_paragraph(self.support_text.get("1.0", tk.END).strip())
+            if (self.extra_credit_policy_var.get() and
+                ((hasattr(self, 'extra_credit_text') and 
+                  self.extra_credit_text.get("1.0", tk.END).strip() != "") or
+                 (hasattr(self, 'extra_credit_var') and 
+                  self.extra_credit_var.get() in self.extra_credit_policies))):
+                doc.add_heading("Extra Credit", level=2)
+                if hasattr(self, 'extra_credit_text') and self.extra_credit_text.get("1.0", tk.END).strip():
+                    doc.add_paragraph(self.extra_credit_text.get("1.0", tk.END).strip())
+                elif hasattr(self, 'extra_credit_var') and self.extra_credit_var.get() in self.extra_credit_policies:
+                    selected_policy = self.extra_credit_var.get()
+                    doc.add_paragraph(self.extra_credit_policies[selected_policy])
                 else:
-                    doc.add_paragraph("You are welcome to come to regular office hours or to schedule an individual appointment with your professor or TA. When needed, I also encourage you to seek support from the academic resources listed on this syllabus.")
+                    doc.add_paragraph("Extra credit policy not specified.")
             
+
+            # Canvas Policy
+            if (self.canvas_policy_var.get() and hasattr(self, 'canvas_policy_text')):
+                doc.add_heading("Canvas", level=2)
+                doc.add_paragraph(self.canvas_policy_text.get("1.0", tk.END).strip())
+
+
+            # Technology Policy
+            if (self.technology_policy_var.get() and hasattr(self, 'technology_policy_text')):
+                doc.add_heading("Technology in the Classroom", level=2)
+                doc.add_paragraph(self.technology_policy_text.get("1.0", tk.END).strip())
+
+
+            # Communication Policy
+            if (self.communication_policy_var.get() and hasattr(self, 'communication_policy_text')):
+                doc.add_heading("Class Communication Policy", level=2)
+                doc.add_paragraph(self.communication_policy_text.get("1.0", tk.END).strip())
+
+
+            # Assignment Support section
+            if (self.outside_support_var.get() and hasattr(self, 'support_text')):
+                doc.add_heading("Assignment Support Outside the Classroom", level=2)
+                doc.add_paragraph(self.support_text.get("1.0", tk.END).strip())
+                        
             # IV. Evaluations section
             doc.add_heading("IV. Evaluations", level=1)
             p = doc.add_paragraph()
@@ -2520,7 +2614,7 @@ class HistorySyllabusGenerator:
                 p.add_run("; 352-392-1261).")
             
             # Campus Resources (if enabled)
-            if self.campus_resources_var.get():
+            if hasattr(self, 'campus_resources_var') and self.campus_resources_var.get():
                 doc.add_heading("Campus Resources", level=2)
                 
                 # U Matter, We Care
@@ -3175,7 +3269,8 @@ class HistorySyllabusGenerator:
             if hasattr(self, 'materials_text') and self.materials_text.get("1.0", tk.END).strip():
                 self._add_preview_section(content_container, "Required Materials", 11, "bold")
                 materials = self.materials_text.get("1.0", tk.END).strip()
-                self._add_preview_text(content_container, materials)
+                # --- Use markup parser for formatted output ---
+                self.parse_materials_markup(materials, doc=None)
                 # Show Materials Fee if present
                 fee_value = ""
                 if hasattr(self, 'fee_entry') and self.fee_entry.get().strip():
@@ -4028,7 +4123,7 @@ def process_text_with_hyperlinks(paragraph, text):
                     # Regular text
                     if email_part.strip():
                         paragraph.add_run(email_part)
-
+                        
 if __name__ == "__main__":
     app = HistorySyllabusGenerator()
     app.run()
