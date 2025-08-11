@@ -21,10 +21,68 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 import docx
+
+# Enhanced COM initialization for PyInstaller
 try:
-    from docx2pdf import convert
+    import pythoncom
+    import win32com.client
+    from docx2pdf import convert as docx2pdf_convert
     DOCX2PDF_AVAILABLE = True
-except ImportError:
+    
+    def convert_with_com_init(input_path, output_path):
+        """Convert with proper COM initialization for PyInstaller"""
+        # docx2pdf works best with apartment-threaded COM (the default)
+        # Try apartment-threaded first, then multithreaded as fallback
+        exceptions = []
+        
+        # Method 1: Standard apartment-threaded COM initialization (preferred by docx2pdf)
+        # This is what works in console applications
+        try:
+            pythoncom.CoInitialize()
+            try:
+                docx2pdf_convert(input_path, output_path)
+                return  # Success!
+            finally:
+                pythoncom.CoUninitialize()
+        except Exception as e:
+            exceptions.append(f"Apartment-threaded COM: {e}")
+        
+        # Method 2: Try with multithreaded COM initialization (for windowed apps)
+        try:
+            pythoncom.CoInitialize()
+            try:
+                docx2pdf_convert(input_path, output_path)
+                return  # Success!
+            finally:
+                pythoncom.CoUninitialize()
+        except Exception as e:
+            exceptions.append(f"Standard COM: {e}")
+        
+        # Method 3: Try with apartment threaded mode
+        try:
+            pythoncom.CoInitializeEx(pythoncom.COINIT_APARTMENTTHREADED)
+            try:
+                docx2pdf_convert(input_path, output_path)
+                return  # Success!
+            finally:
+                pythoncom.CoUninitialize()
+        except Exception as e:
+            exceptions.append(f"Apartment threaded: {e}")
+        
+        # Method 4: Try without COM initialization as last resort
+        try:
+            docx2pdf_convert(input_path, output_path)
+            return  # Success!
+        except Exception as e:
+            exceptions.append(f"Direct method: {e}")
+        
+        # If all methods fail, raise the last exception
+        raise RuntimeError(f"All docx2pdf methods failed: {'; '.join(exceptions)}")
+    
+    # Use the enhanced function as our convert function
+    convert = convert_with_com_init
+    
+except ImportError as e:
     DOCX2PDF_AVAILABLE = False
     def convert(input_path, output_path):
         raise RuntimeError("docx2pdf library is not installed. Cannot convert to PDF.")

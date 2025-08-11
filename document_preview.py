@@ -494,8 +494,22 @@ class DocumentPreviewMixin:
             # V. Course Schedule (formerly VI.)
             self._add_preview_section(content_container, "V. Calendar", 12, "bold")
             
-            # Schedule Table Preview
+            # Check if there are any non-empty schedule entries
+            has_schedule_content = False
             if hasattr(self, 'schedule_entries') and self.schedule_entries:
+                for entry in self.schedule_entries:
+                    date_text = entry["date"].get().strip()
+                    topic_text = entry["topic"].get().strip()
+                    readings_text = entry["readings"].get("1.0", tk.END).strip()
+                    work_due_text = entry["work_due"].get().strip()
+                    
+                    # If any row has content, we have schedule content
+                    if any([date_text, topic_text, readings_text, work_due_text]):
+                        has_schedule_content = True
+                        break
+            
+            # Schedule Table Preview
+            if has_schedule_content:
                 schedule_table_frame = ttk.Frame(content_container, style="Preview.TFrame")
                 schedule_table_frame.pack(fill=tk.X, pady=5)
                 
