@@ -383,21 +383,10 @@ class DocumentPreviewMixin:
             note_text = "Note: A minimum grade of C is required to earn General Education credit."
             self._add_preview_text(content_container, note_text)
             
-            # Add University Assessment Policy if checked
-            if hasattr(self, 'assessment_policy_var') and self.assessment_policy_var.get():
-                self._add_preview_section(content_container, "University Assessment Policies", 11, "bold")
-                assessment_text = "Requirements for make-up exams, assignments, and other work in this course are consistent with university policies that can be found in the Catalog."
-                self._add_preview_text(content_container, assessment_text)
-                
             # Add Instructions for Submitting Written Assignments section
             self._add_preview_section(content_container, "Instructions for Submitting Written Assignments", 12, "bold")
             self._add_preview_text(content_container, "All written assignments must be submitted as Word documents (.doc or .docx) through the \"Assignments\" portal in Canvas by the specified deadlines. Do NOT send assignments as PDF files.")
                         
-            # Add Extensions & Make-Up Exams if checked
-            if hasattr(self, 'extensions_policy_var') and self.extensions_policy_var.get():
-                self._add_preview_section(content_container, "Extensions & Make-Up Exams", 11, "bold")
-                self._add_preview_text_with_link(content_container, "Only the professor can authorize an extension or make-up exam, and all requests must be supported by documentation from a medical provider, Student Health Services, the Disability Resource Center, or the Dean of Students Office. Requirements for attendance and make-up exams, assignments, and other work in this course are consistent with university policies: https://catalog.ufl.edu/ugrad/current/regulations/info/attendance.aspx")
-            
             # Add Late Submissions policy (show content from the input)
             if hasattr(self, 'late_submissions_policy_var') and self.late_submissions_policy_var.get():
                 self._add_preview_section(content_container, "Late Submissions", 11, "bold")
@@ -453,25 +442,8 @@ class DocumentPreviewMixin:
                     support_text = self.support_text.get("1.0", tk.END).strip()
                     self._add_preview_text_with_link(content_container, support_text)
             
-            # Add new "IV. Evaluations" section
-            self._add_preview_section(content_container, "IV. Evaluations", 12, "bold")
-            eval_text = (
-                "UF course evaluation process\n"
-                "Students are expected to provide professional and respectful feedback on the quality of "
-                "instruction in this course by completing course evaluations online. Students can complete "
-                "evaluations in three ways:\n\n"
-                "1. The email they receive from GatorEvals,\n"
-                "2. Their Canvas course menu under GatorEvals, or\n"
-                "3. The central portal at https://my-ufl.bluera.com\n\n"
-                "Guidance on how to provide constructive feedback is available at "
-                "https://gatorevals.aa.ufl.edu/students/. Students will be notified when the evaluation "
-                "period opens. Summaries of course evaluation results are available to students at "
-                "https://gatorevals.aa.ufl.edu/public-results/."
-            )
-            self._add_preview_text_with_link(content_container, eval_text)
-
-            # Add new "V. University Policies and Resources" section
-            self._add_preview_section(content_container, "V. University Policies and Resources", 12, "bold")
+            # Add "IV. University Policies and Resources" section (formerly V.)
+            self._add_preview_section(content_container, "IV. University Policies and Resources", 12, "bold")
             
             # Check if simplified policies are enabled
             if hasattr(self, 'use_simplified_policies_var') and self.use_simplified_policies_var.get():
@@ -518,27 +490,9 @@ class DocumentPreviewMixin:
                     " Note that plagiarism also includes the use of any artificial intelligence programs, such as ChatGPT."
                 )
                 self._add_preview_text(content_container, plagiarism_text)
-                
-                # Move in-class recording policy here, after V. University Policies and Resources
-                if hasattr(self, 'in_class_recording_var') and self.in_class_recording_var.get():
-                    self._add_preview_section(content_container, "In-class recording", 11, "bold")
-                    self._add_preview_text(content_container, recording_policy_default)
-                    
-                if hasattr(self, 'conflict_resolution_var') and self.conflict_resolution_var.get():
-                    self._add_preview_section(content_container, "Procedure for conflict resolution", 11, "bold")
-                    self._add_preview_text(content_container, conflict_resolution_default)
-                    
-                if hasattr(self, 'campus_resources_var') and self.campus_resources_var.get():
-                    self._add_preview_section(content_container, "Campus Resources", 11, "bold")
-                    self._add_preview_text(content_container, campus_resources_default)
-                    
-                # Academic Resources (moved inside else block)
-                if hasattr(self, 'academic_resources_var') and self.academic_resources_var.get():
-                    self._add_preview_section(content_container, "Academic Resources", 11, "bold")
-                    self._add_preview_text(content_container, academic_resources_default)
 
-            # VI. Course Schedule
-            self._add_preview_section(content_container, "VI. Calendar", 12, "bold")
+            # V. Course Schedule (formerly VI.)
+            self._add_preview_section(content_container, "V. Calendar", 12, "bold")
             
             # Schedule Table Preview
             if hasattr(self, 'schedule_entries') and self.schedule_entries:

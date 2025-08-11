@@ -23,9 +23,16 @@ from reportlab.lib.units import inch
 import docx
 try:
     from docx2pdf import convert
+    DOCX2PDF_AVAILABLE = True
 except ImportError:
+    DOCX2PDF_AVAILABLE = False
     def convert(input_path, output_path):
         raise RuntimeError("docx2pdf library is not installed. Cannot convert to PDF.")
+
+# Additional imports for cross-platform PDF generation
+import subprocess
+import sys
+import platform
 
 from constants import *
 
@@ -98,109 +105,230 @@ def process_text_with_hyperlinks(paragraph, text):
 class DocumentGenerationMixin:
     """Mixin class containing all document generation methods"""
     
-    def generate_pdf(self, export_path, content):
-        """Generate PDF directly using ReportLab"""
-        # Configure the PDF document with proper page setup
-        doc = SimpleDocTemplate(
-            export_path,
-            pagesize=letter,
-            rightMargin=36,
-            leftMargin=36,
-            topMargin=36,
-            bottomMargin=36
-        )
+    def check_pdf_capabilities(self):
+        """Check what PDF generation capabilities are available"""
+        capabilities = {
+            "docx2pdf": DOCX2PDF_AVAILABLE and platform.system() == "Windows",
+            "libreoffice": False,
+            "reportlab": True  # Always available since it's in requirements
+        }
         
-        # Calculate available width for content
-        available_width = letter[0] - 72  # 72 points = 1 inch (36pt margin on each side)
+        # Check for LibreOffice
+        libreoffice_paths = []
+        if platform.system() == "Windows":
+            libreoffice_paths = [
+                r"C:\Program Files\LibreOffice\program\soffice.exe",
+                r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+            ]
+        elif platform.system() == "Darwin":  # macOS
+            libreoffice_paths = [
+                "/Applications/LibreOffice.app/Contents/MacOS/soffice"
+            ]
+        else:  # Linux
+            libreoffice_paths = [
+                "/usr/bin/libreoffice",
+                "/usr/bin/soffice",
+                "/snap/bin/libreoffice"
+            ]
         
+        for path in libreoffice_paths:
+            if os.path.exists(path):
+                capabilities["libreoffice"] = True
+                break
+        
+        return capabilities
+    
+    def show_pdf_setup_info(self):
+        """Show information about PDF setup and requirements"""
+        capabilities = self.check_pdf_capabilities()
+        
+        message = "PDF Generation Setup Information\n\n"
+        
+        if capabilities["docx2pdf"]:
+            message += "✓ Microsoft Word integration available\n"
+        else:
+            message += "✗ Microsoft Word integration not available\n"
+            
+        if capabilities["libreoffice"]:
+            message += "✓ LibreOffice integration available\n"
+        else:
+            message += "✗ LibreOffice not found\n"
+            
+        message += "✓ Basic PDF generation always available\n\n"
+        
+        message += "For best PDF quality, install one of the following:\n\n"
+        message += "Option 1: Microsoft Word (Windows)\n"
+        message += "• Provides best formatting and compatibility\n"
+        message += "• Automatically used if available\n\n"
+        
+        message += "Option 2: LibreOffice (Free, All Platforms)\n"
+        message += "• Download from: https://www.libreoffice.org\n"
+        message += "• Good formatting and cross-platform support\n"
+        message += "• Automatically detected and used\n\n"
+        
+        message += "Option 3: Basic PDF (Always Available)\n"
+        message += "• Uses built-in PDF generation\n"
+        message += "• Basic formatting only\n"
+        message += "• No additional software required\n\n"
+        
+        if not capabilities["docx2pdf"] and not capabilities["libreoffice"]:
+            message += "RECOMMENDATION: Install LibreOffice for better PDF support"
+        
+        messagebox.showinfo("PDF Setup Information", message)
+    
+    def convert_docx_to_pdf_robust(self, docx_path, pdf_path):
+        """
+        Robust PDF conversion with multiple fallback methods.
+        Handles permission issues and cross-platform compatibility.
+        """
+        errors = []
+        
+        # Method 1: Try docx2pdf (Windows with Word)
+        if DOCX2PDF_AVAILABLE and platform.system() == "Windows":
+            try:
+                # Ensure paths are absolute and writable
+                abs_docx_path = os.path.abspath(docx_path)
+                abs_pdf_path = os.path.abspath(pdf_path)
+                
+                # Check if output directory is writable
+                output_dir = os.path.dirname(abs_pdf_path)
+                if not os.access(output_dir, os.W_OK):
+                    raise PermissionError(f"No write permission to directory: {output_dir}")
+                
+                # Try to create/delete a test file to verify permissions
+                test_file = os.path.join(output_dir, "test_write_permission.tmp")
+                try:
+                    with open(test_file, 'w') as f:
+                        f.write("test")
+                    os.remove(test_file)
+                except Exception as perm_error:
+                    raise PermissionError(f"Cannot write to directory: {output_dir}")
+                
+                convert(abs_docx_path, abs_pdf_path)
+                return True, "PDF created successfully using docx2pdf"
+                
+            except Exception as e:
+                error_msg = str(e).lower()
+                if "com" in error_msg or "word" in error_msg:
+                    errors.append("docx2pdf failed - Microsoft Word not properly configured")
+                elif "permission" in error_msg:
+                    errors.append("docx2pdf failed - Permission denied")
+                else:
+                    errors.append(f"docx2pdf failed - {str(e)[:100]}")
+        
+        # Method 2: Try LibreOffice command line (cross-platform)
+        try:
+            # Common LibreOffice executable locations
+            libreoffice_paths = []
+            if platform.system() == "Windows":
+                libreoffice_paths = [
+                    r"C:\Program Files\LibreOffice\program\soffice.exe",
+                    r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+                ]
+            elif platform.system() == "Darwin":  # macOS
+                libreoffice_paths = [
+                    "/Applications/LibreOffice.app/Contents/MacOS/soffice"
+                ]
+            else:  # Linux
+                libreoffice_paths = [
+                    "/usr/bin/libreoffice",
+                    "/usr/bin/soffice",
+                    "/snap/bin/libreoffice"
+                ]
+            
+            # Try to find LibreOffice
+            soffice_path = None
+            for path in libreoffice_paths:
+                if os.path.exists(path):
+                    soffice_path = path
+                    break
+            
+            if soffice_path:
+                output_dir = os.path.dirname(pdf_path)
+                cmd = [
+                    soffice_path,
+                    "--headless",
+                    "--convert-to", "pdf",
+                    "--outdir", output_dir,
+                    docx_path
+                ]
+                
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+                if result.returncode == 0:
+                    # LibreOffice creates PDF with same name as docx
+                    expected_pdf = os.path.join(output_dir, os.path.splitext(os.path.basename(docx_path))[0] + ".pdf")
+                    if os.path.exists(expected_pdf) and expected_pdf != pdf_path:
+                        os.rename(expected_pdf, pdf_path)
+                    return True, "PDF created successfully using LibreOffice"
+                else:
+                    errors.append(f"LibreOffice conversion failed: {result.stderr}")
+            else:
+                errors.append("LibreOffice not found")
+                
+        except subprocess.TimeoutExpired:
+            errors.append("LibreOffice conversion timed out")
+        except Exception as e:
+            errors.append(f"LibreOffice conversion failed: {str(e)}")
+        
+        # Method 3: Try native ReportLab PDF generation (always available)
+        try:
+            # This is our fallback that creates a basic PDF directly
+            self.generate_pdf_reportlab(pdf_path)
+            return True, "PDF created successfully using ReportLab (basic formatting)"
+        except Exception as e:
+            errors.append(f"ReportLab generation failed: {str(e)}")
+        
+        # If all methods failed
+        return False, "; ".join(errors)
+    
+    def generate_pdf_reportlab(self, pdf_path):
+        """Generate PDF directly using ReportLab as fallback method"""
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.lib.pagesizes import letter
+        
+        # Gather content from the form
+        content = self.gather_content()
+        
+        doc = SimpleDocTemplate(pdf_path, pagesize=letter)
         styles = getSampleStyleSheet()
         story = []
-    
-        # VI. Course Schedule
-        story.append(Paragraph("VI. Calendar", styles['CustomHeading1']))
         
-        # Create schedule table with preprocessed data
-        schedule_data = [["Date", "Topic", "Readings/Preparation", "Work Due"]]
+        # Add title
+        title = f"{content.get('course_number', '')} - {content.get('course_title', '')}"
+        story.append(Paragraph(title, styles['Title']))
+        story.append(Spacer(1, 12))
         
-        # Process the schedule entries first to better handle text wrapping
-        processed_schedule_data = []
-        for entry in self.schedule_entries:
-            date = entry['date'].get()
-            topic = entry['topic'].get()
-            readings = entry['readings'].get("1.0", tk.END).strip()
-            work_due = entry['work_due'].get()
-            
-            # Insert intelligent line breaks for better text wrapping in readings column
-            if len(readings) > 80:  # If content is long
-                # Add line breaks at natural points
-                readings = readings.replace(". ", ".\n")
-                readings = readings.replace("; ", ";\n")
-                readings = readings.replace("] ", "]\n")
-                readings = readings.replace("words)", "words)\n")
-            
-            # Insert breaks for topic if needed
-            if len(topic) > 20:
-                topic = topic.replace("; ", ";\n")
-                topic = topic.replace(": ", ":\n")
-            
-            processed_schedule_data.append([date, topic, readings, work_due])
-        
-        schedule_data.extend(processed_schedule_data)
-        
-        # Set optimized column widths - adjusted for better balance
-        col_widths = [
-            0.6*inch,   # Date column (slightly narrower)
-            1.1*inch,   # Topic column (slightly narrower)
-            3.0*inch,   # Readings column (wider for more content)
-            1.0*inch    # Work Due column
+        # Add basic course info
+        info_items = [
+            f"Term: {content.get('semester', '')}",
+            f"Credits: {content.get('credits', '')}",
+            f"Meeting Times: {content.get('meeting_times', '')}",
+            f"Location: {content.get('location', '')}",
+            f"Instructor: {content.get('instructor_name', '')}",
+            f"Email: {content.get('instructor_email', '')}"
         ]
         
-        # Create schedule table with the adjusted column widths
-        schedule_table = Table(schedule_data, colWidths=col_widths, repeatRows=1)
+        for item in info_items:
+            if item.split(': ')[1]:  # Only add if value exists
+                story.append(Paragraph(item, styles['Normal']))
         
-        # Apply table styles with improved word wrapping settings
-        schedule_table.setStyle(TableStyle([
-            # Header row styling
-            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 8),
-            ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
-            
-            # Content rows styling
-            ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
-            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, -1), 7),  # Smaller font for better fit
-            ('GRID', (0, 0), (-1, -1), 1, colors.black),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),  # Align text to top
-            ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
-            
-            # Reduced padding for more content space
-            ('LEFTPADDING', (0, 0), (-1, -1), 2),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 2),
-            ('TOPPADDING', (0, 0), (-1, -1), 2),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
-            
-            # Critical for word wrapping
-            ('WORDWRAP', (0, 0), (-1, -1), True)
-        ]))
+        story.append(Spacer(1, 12))
         
-        # Add the table to the story
-        story.append(schedule_table)
+        # Add description if available
+        if content.get('description'):
+            story.append(Paragraph("Course Description", styles['Heading2']))
+            story.append(Paragraph(content['description'], styles['Normal']))
+            story.append(Spacer(1, 12))
         
-        # Define a page template with page numbers
-        def add_page_number(canvas, doc):
-            """Add page numbers to each page"""
-            canvas.saveState()
-            canvas.setFont('Helvetica', 9)
-            # Position the page number at the bottom center of the page
-            canvas.drawCentredString(letter[0]/2, 20, f"Page {canvas.getPageNumber()}")
-            canvas.restoreState()
+        # Add a note about formatting
+        story.append(Spacer(1, 24))
+        note = ("Note: This PDF was generated using basic formatting. "
+                "For full formatting, please install Microsoft Word or LibreOffice "
+                "and use the Word document export option.")
+        story.append(Paragraph(note, styles['BodyText']))
         
-        # Build the document with page numbers
-        doc.build(story, onFirstPage=add_page_number, onLaterPages=add_page_number)
+        doc.build(story)
 
     def generate_syllabus(self, export_format="docx"):
         """Generate the final syllabus document"""
@@ -225,20 +353,53 @@ class DocumentGenerationMixin:
 
         try:
             if export_path.lower().endswith('.pdf') or export_format == "pdf":
-                # 1. Create a temporary .docx file
+                # Create temporary Word document first
                 with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as tmp_docx:
                     docx_path = tmp_docx.name
-                doc = self.create_syllabus_document()
-                doc.save(docx_path)
-                # 2. Convert to PDF
-                convert(docx_path, export_path)
-                # 3. Remove the temporary .docx
-                os.remove(docx_path)
-                messagebox.showinfo("Success", f"Syllabus saved as PDF: {export_path}")
+                
+                try:
+                    # Generate Word document
+                    doc = self.create_syllabus_document()
+                    doc.save(docx_path)
+                    
+                    # Convert to PDF using robust method
+                    success, message = self.convert_docx_to_pdf_robust(docx_path, export_path)
+                    
+                    if success:
+                        messagebox.showinfo("Success", f"Syllabus saved as PDF: {export_path}\n\n{message}")
+                    else:
+                        # Offer fallback to Word document
+                        fallback_path = export_path.replace('.pdf', '.docx')
+                        choice = messagebox.askyesno("PDF Failed - Save as Word?", 
+                            f"PDF conversion failed:\n{message}\n\n"
+                            f"Would you like to save as Word document instead?\n"
+                            f"File: {fallback_path}\n\n"
+                            f"You can then open it in Word/LibreOffice and use 'Save As PDF'.")
+                        
+                        if choice:
+                            doc.save(fallback_path)
+                            messagebox.showinfo("Saved as Word", 
+                                f"Document saved as: {fallback_path}\n\n"
+                                f"To convert to PDF:\n"
+                                f"• Open in Microsoft Word or LibreOffice\n"
+                                f"• Use 'File > Export as PDF' or 'Save As > PDF'\n"
+                                f"• Or use online converters like SmallPDF")
+                        else:
+                            messagebox.showinfo("PDF Not Created", 
+                                "PDF was not created. Consider installing LibreOffice for better PDF support.")
+                
+                finally:
+                    # Clean up temporary file
+                    try:
+                        os.remove(docx_path)
+                    except:
+                        pass
             else:
+                # Save as Word document
                 doc = self.create_syllabus_document()
                 doc.save(export_path)
                 messagebox.showinfo("Success", f"Syllabus saved as Word document: {export_path}")
+                
         except Exception as e:
             messagebox.showerror("Error", 
                 f"Failed to save syllabus:\n{str(e)}\n\n"
@@ -682,30 +843,10 @@ class DocumentGenerationMixin:
             p = doc.add_paragraph()
             p.add_run("Note: A minimum grade of C is required to earn General Education credit.")
             
-            # Add University Assessment Policy if checked
-            if hasattr(self, 'assessment_policy_var') and self.assessment_policy_var.get():
-                doc.add_heading("University Assessment Policies", level=2)
-                p = doc.add_paragraph()
-                p.add_run("Requirements for make-up exams, assignments, and other work in this course are consistent with university policies that can be found in the ")
-                add_hyperlink(p, "Catalog", "https://catalog.ufl.edu/ugrad/current/regulations/info/attendance.aspx")
-                p.add_run(".")
-
             # Instructions for Submitting Written Assignments
             doc.add_heading("Instructions for Submitting Written Assignments", level=1)
             doc.add_paragraph("All written assignments must be submitted as Word documents (.doc or .docx) through the \"Assignments\" portal in Canvas by the specified deadlines. Do NOT send assignments as PDF files.")
             
-            # Add Extensions & Make-Up Exams if checked
-            if hasattr(self, 'extensions_policy_var') and self.extensions_policy_var.get():
-                doc.add_heading("Extensions & Make-Up Exams", level=2)
-                p = doc.add_paragraph()
-                extensions_text = (
-                    "Only the professor can authorize an extension or make-up exam, and all requests must be "
-                    "supported by documentation from a medical provider, Student Health Services, the Disability Resource Center, "
-                    "or the Dean of Students Office. Requirements for attendance and make-up exams, assignments, and other work "
-                    "in this course are consistent with university policies: https://catalog.ufl.edu/ugrad/current/regulations/info/attendance.aspx"
-                )
-                process_text_with_hyperlinks(p, extensions_text)
-
             # Add Late Submissions policy
             if (self.late_submissions_policy_var.get() and
                 ((hasattr(self, 'late_policy_text') and 
@@ -760,34 +901,16 @@ class DocumentGenerationMixin:
                 doc.add_heading("Assignment Support Outside the Classroom", level=2)
                 doc.add_paragraph(self.support_text.get("1.0", tk.END).strip())
                         
-            # IV. Evaluations section
-            doc.add_heading("IV. Evaluations", level=1)
-            p = doc.add_paragraph()
-            eval_text = (
-                "UF course evaluation process\n"
-                "Students are expected to provide professional and respectful feedback on the quality of "
-                "instruction in this course by completing course evaluations online. Students can complete "
-                "evaluations in three ways:\n\n"
-                "1. The email they receive from GatorEvals,\n"
-                "2. Their Canvas course menu under GatorEvals, or\n"
-                "3. The central portal at https://my-ufl.bluera.com\n\n"
-                "Guidance on how to provide constructive feedback is available at "
-                "https://gatorevals.aa.ufl.edu/students/. Students will be notified when the evaluation "
-                "period opens. Summaries of course evaluation results are available to students at "
-                "https://gatorevals.aa.ufl.edu/public-results/."
-            )
-            process_text_with_hyperlinks(p, eval_text)
-            
-            # V. University Policies and Resources
-            doc.add_heading("V. University Policies and Resources", level=1)
+            # IV. University Policies and Resources (formerly V.)
+            doc.add_heading("IV. University Policies and Resources", level=1)
             
             # Check if simplified policies are enabled
             if hasattr(self, 'use_simplified_policies_var') and self.use_simplified_policies_var.get():
                 # Use simplified UF policies
                 from constants import uf_policy_simplified
                 p = doc.add_paragraph()
-                p.add_run(uf_policy_simplified.split(": ")[0] + ": ")
-                add_hyperlink(p, "this link", uf_policy_simplified.split(": ")[1])
+                p.add_run("This course complies with all UF academic policies. For information on those polices and for resources for students, please see ")
+                add_hyperlink(p, "this link", "https://syllabus.ufl.edu/syllabus-policy/uf-syllabus-policy-links/")
                 p.add_run(".")
             else:
                 # Use original detailed policies
@@ -822,131 +945,9 @@ class DocumentGenerationMixin:
                 "b. Submitting a document or assignment which in whole or in part is identical or substantially identical to a document or assignment not authored by the student."
                 " Note that plagiarism also includes the use of any artificial intelligence programs, such as ChatGPT. ")
                 
-                # In-class recording policy (if enabled)
-                if hasattr(self, 'in_class_recording_var') and self.in_class_recording_var.get():
-                    doc.add_heading("In-class recording", level=2)
-                    doc.add_paragraph(recording_policy_default)
                 
-                # Conflict resolution (if enabled)
-                if hasattr(self, 'conflict_resolution_var') and self.conflict_resolution_var.get():
-                    doc.add_heading("Procedure for conflict resolution", level=2)
-                    p = doc.add_paragraph()
-                    p.add_run("Any classroom issues, disagreements or grade disputes should be discussed first between the instructor and the student. ")
-                    p.add_run("If the problem cannot be resolved, please contact Nina Caputo (Associate Chair) (")
-                    add_hyperlink(p, "ncaputo@ufl.edu", "mailto:ncaputo@ufl.edu")
-                    p.add_run(", 352-273-3379). ")
-                    p.add_run("Be prepared to provide documentation of the problem, as well as all graded materials for the semester. ")
-                    p.add_run("Issues that cannot be resolved departmentally will be referred to the University Ombuds Office (")
-                    add_hyperlink(p,"http://www.ombuds.ufl.edu", "http://www.ombuds.ufl.edu")
-                    p.add_run("; 352-392-1308) or the Dean of Students Office (")
-                    add_hyperlink(p, "http://www.dso.ufl.edu", "http://www.dso.ufl.edu")
-                    p.add_run("; 352-392-1261).")
-                
-                # Campus Resources (if enabled)
-                if hasattr(self, 'campus_resources_var') and self.campus_resources_var.get():
-                    doc.add_heading("Campus Resources", level=2)
-                    
-                    # U Matter, We Care
-                    p = doc.add_paragraph()
-                    p.add_run("U Matter, We Care: ")
-                    p.add_run("If you or someone you know is in distress, please contact ")
-                    add_hyperlink(p, "umatter@ufl.edu", "mailto:umatter@ufl.edu"), 
-                    p.add_run(" 352-392-1575, or visit ")
-                    add_hyperlink(p, "U Matter, We Care website", "https://umatter.ufl.edu/")
-                    p.add_run(", to refer or report a concern and a team member will reach out to the student in distress.")
-
-                    # Counseling and Wellness Center
-                    p = doc.add_paragraph()
-                    p.add_run("Counseling and Wellness Center: ")
-                p.add_run("Visit the ") 
-                add_hyperlink(p, "Counseling and Wellness Center website", "https://counseling.ufl.edu/") 
-                p.add_run(" or call 352-392-1575 for information on crisis services as well as non-crisis services.")
-                
-                # Student Health Care Center
-                p = doc.add_paragraph()
-                p.add_run("Student Health Care Center: ")
-                p.add_run("Call 352-392-1161 for 24/7 information to help you find the care you need, or visit the ")
-                add_hyperlink(p, "Student Health Care Center website", "https://shcc.ufl.edu/")
-                p.add_run(".")
-                
-                # University Police Department
-                p = doc.add_paragraph()
-                p.add_run("University Police Department: ")
-                p.add_run("Visit ")
-                add_hyperlink(p, "UF Police Department website", "https://police.ufl.edu/") 
-                p.add_run(" or call 352-392-1111 (or 9-1-1 for emergencies).")
-                
-                # UF Health Shands Emergency Room
-                p = doc.add_paragraph()
-                p.add_run("UF Health Shands Emergency Room / Trauma Center: ")
-                p.add_run("For immediate medical care call 352-733-0111 or go to the emergency room at 1515 SW Archer Road, Gainesville, FL 32608; Visit the ")
-                add_hyperlink(p, "UF Health Emergency Room and Trauma Center website", "https://ufhealth.org/emergency-room-trauma-center")
-                p.add_run(".")
-                
-                # GatorWell Health Promotion Services
-                p = doc.add_paragraph()
-                p.add_run("GatorWell Health Promotion Services: ")
-                p.add_run("For prevention services focused on optimal wellbeing, including Wellness Coaching for Academic Success, visit the ")
-                add_hyperlink(p, "GatorWell website", "https://gatorwell.ufsa.ufl.edu/")
-                p.add_run(" or call 352-273-4450.") 
-                
-                # Student Success Initiative
-                p = doc.add_paragraph()
-                p.add_run("Student Success Initiative, ")
-                add_hyperlink(p, "https://studentsuccess.ufl.edu/", "https://studentsuccess.ufl.edu")
-                
-                # Field and Fork Pantry
-                p = doc.add_paragraph()
-                add_hyperlink(p, "Field and Fork Pantry", "https://pantry.fieldandfork.ufl.edu/")
-                p.add_run(". Food and toiletries for students experiencing food insecurity.")
-                
-                # Dean of Students Office
-                p = doc.add_paragraph()
-                add_hyperlink(p, "Dean of Students Office", "https://care.dso.ufl.edu/")
-                p.add_run(". 202 Peabody Hall, 392-1261. Among other services, the DSO assists students who are experiencing situations that compromises their ability to attend classes. This includes family emergencies and medical issues (including mental health crises).")
-                
-                # Academic Resources (if enabled)
-                if self.academic_resources_var.get():
-                    doc.add_heading("Academic Resources", level=2)
-                    
-                    #Career Connections Cernter
-                    p = doc.add_paragraph()
-                    add_hyperlink(p, "Career Connections Center", "https://career.ufl.edu/")
-                    p.add_run(": Reitz Union Suite 1300, 352-392-1601. Career assistance and counseling services.  ")
-
-                    # E-learning support
-                    p = doc.add_paragraph()
-                    p.add_run("E-learning technical support: Contact the ") 
-                    add_hyperlink(p, "UF Computing Help Desk", "http://helpdesk.ufl.edu/")
-                    p.add_run(" at 352-392-4357 or via e-mail at ")
-                    add_hyperlink(p, "helpdesk@ufl.edu", "mailto:helpdesk@ufl.edu")
-                    p.add_run(".")
-                    
-                    # Library Support
-                    p = doc.add_paragraph()
-                    add_hyperlink(p, "Library Support", "https://cms.uflib.ufl.edu/ask")
-                    p.add_run(": Various ways to receive assistance with respect to using the libraries or finding resources.")
-                    
-                    # Teaching Center
-                    p = doc.add_paragraph()
-                    add_hyperlink(p, "Teaching Center", "https://teachingcenter.ufl.edu/")
-                    p.add_run(": Broward Hall, 352-392-2010 or to make an appointment 352-392-6420. General study skills and tutoring.")
-                    
-                    # Writing Studio
-                    p = doc.add_paragraph()
-                    add_hyperlink(p, "Writing Studio", "https://writing.ufl.edu/writing-studio/")
-                    p.add_run(": 2215 Turlington Hall, 352-846-1138. Help brainstorming, formatting, and writing papers.")
-                    
-                    # Student Complaints On-Campus
-                    p = doc.add_paragraph()
-                    p.add_run("Student Complaints On-Campus: Visit the ")
-                    add_hyperlink(p, "Student Honor Code and Student Conduct Code webpage", "https://sccr.dso.ufl.edu/policies/student-honor-%20code-student-conduct-code/")
-                    p.add_run(" for more information.")
-            
-            # Academic Resources (if enabled)
-            
-            # VI. Course Schedule (Calendar)
-            doc.add_heading("VI. Calendar", level=1)
+            # V. Course Schedule (Calendar) (formerly VI.)
+            doc.add_heading("V. Calendar", level=1)
             
             # Create schedule table if there are entries
             if hasattr(self, 'schedule_entries') and self.schedule_entries:

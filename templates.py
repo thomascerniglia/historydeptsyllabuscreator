@@ -183,24 +183,24 @@ def load_default_templates():
             }
         }
         amh2020_template.late_policy = "Custom"
-        amh2020_template.late_policy_text = "Late assignments will be penalized 10% per day late unless prior arrangements have been made with the instructor due to documented emergency or illness. Contact instructor as soon as possible if you anticipate being unable to meet a deadline."
+        # amh2020_template.late_policy_text = "Late assignments will be penalized 10% per day late unless prior arrangements have been made with the instructor due to documented emergency or illness. Contact instructor as soon as possible if you anticipate being unable to meet a deadline."
         amh2020_template.extra_credit_policy = "Custom"
-        amh2020_template.extra_credit_policy_text = "Extra credit opportunities may be available at the instructor's discretion. These will be announced in class and posted on Canvas when available."
+        # amh2020_template.extra_credit_policy_text = "Extra credit opportunities may be available at the instructor's discretion. These will be announced in class and posted on Canvas when available."
         amh2020_template.grading_categories = []
         amh2020_template.schedule = []  # Leave schedule empty for user to fill in
-        # Set policies
+        # Set policies (only instructor-specific ones)
         amh2020_template.optional_policies = {
-            "in_class_recording": True,
-            "conflict_resolution": True,
-            "campus_resources": True,
-            "academic_resources": True,
-            "late_work": True
+            "late_submissions": True,
+            "extra_credit": True,
+            "canvas": True,
+            "technology": True,
+            "communication": True
         }
-        # Add these policies to the AMH2020 template with slight modifications for testing
-        amh2020_template.canvas_policy = canvas_policy_default + "\n\n[AMH2020 Template Loaded]"
-        amh2020_template.technology_policy = technology_policy_default + "\n\n[AMH2020 Template Loaded]"
-        amh2020_template.communication_policy = class_communication_policy_default + "\n\n[AMH2020 Template Loaded]"
-        amh2020_template.support_policy = assignment_support_default + "\n\n[AMH2020 Template Loaded]"
+        # Add these policies to the AMH2020 template
+        amh2020_template.canvas_policy = canvas_policy_default
+        amh2020_template.technology_policy = technology_policy_default
+        amh2020_template.communication_policy = class_communication_policy_default
+        amh2020_template.support_policy = assignment_support_default
         # Add to templates list
         
 
@@ -259,24 +259,24 @@ def load_default_templates():
             }
         }
         amh2010_template.late_policy = "Custom"
-        amh2010_template.late_policy_text = "Late assignments will be penalized 10% per day late unless prior arrangements have been made with the instructor due to documented emergency or illness. Contact instructor as soon as possible if you anticipate being unable to meet a deadline."
+        # amh2010_template.late_policy_text = "Late assignments will be penalized 10% per day late unless prior arrangements have been made with the instructor due to documented emergency or illness. Contact instructor as soon as possible if you anticipate being unable to meet a deadline."
         amh2010_template.extra_credit_policy = "Custom"  
-        amh2010_template.extra_credit_policy_text = "Extra credit opportunities may be available at the instructor's discretion. These will be announced in class and posted on Canvas when available."
+        # amh2010_template.extra_credit_policy_text = "Extra credit opportunities may be available at the instructor's discretion. These will be announced in class and posted on Canvas when available."
         amh2010_template.grading_categories = []
         amh2010_template.schedule = []  # Leave schedule empty for user to fill in
-        # Set policies
+        # Set policies (only instructor-specific ones)
         amh2010_template.optional_policies = {
-            "in_class_recording": True,
-            "conflict_resolution": True,
-            "campus_resources": True,
-            "academic_resources": True,
-            "late_work": True
+            "late_submissions": True,
+            "extra_credit": True,
+            "canvas": True,
+            "technology": True,
+            "communication": True
         }
-        # Add these policies to the AMH2010 template with slight modifications for testing
-        amh2010_template.canvas_policy = canvas_policy_default + "\n\n[AMH2010 Template Loaded]"
-        amh2010_template.technology_policy = technology_policy_default + "\n\n[AMH2010 Template Loaded]"
-        amh2010_template.communication_policy = class_communication_policy_default + "\n\n[AMH2010 Template Loaded]"
-        amh2010_template.support_policy = assignment_support_default + "\n\n[AMH2010 Template Loaded]"
+        # Add these policies to the AMH2010 template
+        amh2010_template.canvas_policy = canvas_policy_default
+        amh2010_template.technology_policy = technology_policy_default
+        amh2010_template.communication_policy = class_communication_policy_default
+        amh2010_template.support_policy = assignment_support_default
         # Add to templates list
         return [amh2010_template, amh2020_template]
     except Exception as e:

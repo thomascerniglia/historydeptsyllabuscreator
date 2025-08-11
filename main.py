@@ -39,13 +39,7 @@ class HistorySyllabusGenerator(UITabsMixin, DocumentGenerationMixin, DocumentPre
         # Add variable for Gen Ed toggle
         self.show_gen_ed = tk.BooleanVar(value=True)
         self.outside_support_var = tk.BooleanVar(value=True)
-        self.assessment_policy_var = tk.BooleanVar(value=False)  
-        self.extensions_policy_var = tk.BooleanVar(value=False) 
-        self.in_class_recording_var = tk.BooleanVar(value=False)  
-        self.conflict_resolution_var = tk.BooleanVar(value=True)
-        self.campus_resources_var = tk.BooleanVar(value=False) 
-        self.academic_resources_var = tk.BooleanVar(value=False)  
-        self.late_work_var = tk.BooleanVar(value=True)
+        # Keep only instructor-specific policy variables (UF policies will be automatic)
         self.late_submissions_policy_var = tk.BooleanVar(value=True)
         self.extra_credit_policy_var = tk.BooleanVar(value=True)
         self.canvas_policy_var = tk.BooleanVar(value=True)
@@ -53,14 +47,9 @@ class HistorySyllabusGenerator(UITabsMixin, DocumentGenerationMixin, DocumentPre
         self.communication_policy_var = tk.BooleanVar(value=True)
         # Add grading rounding option
         self.grading_rounding_var = tk.BooleanVar(value=False)
-        # Add simplified UF policies option
+        # UF policies are now always included via link (not optional)
         self.use_simplified_policies_var = tk.BooleanVar(value=True)
         self.optional_policies = {
-            "in_class_recording": self.in_class_recording_var,
-            "conflict_resolution": self.conflict_resolution_var,
-            "campus_resources": self.campus_resources_var,
-            "academic_resources": self.academic_resources_var,
-            "late_work": self.late_work_var,
             "late_submissions": self.late_submissions_policy_var,
             "extra_credit": self.extra_credit_policy_var,
             "canvas": self.canvas_policy_var,
@@ -126,7 +115,7 @@ class HistorySyllabusGenerator(UITabsMixin, DocumentGenerationMixin, DocumentPre
                   command=lambda: self.generate_syllabus("docx"), 
                   style='Action.TButton').pack(side=tk.LEFT, padx=5)
         
-        ttk.Button(generate_frame, text="Generate PDF", 
+        ttk.Button(generate_frame, text="Generate PDF Document", 
                   command=lambda: self.generate_syllabus("pdf"), 
                   style='Action.TButton').pack(side=tk.LEFT, padx=5)
 
@@ -231,8 +220,10 @@ class HistorySyllabusGenerator(UITabsMixin, DocumentGenerationMixin, DocumentPre
                     
             # Student Learning Outcomes
             if hasattr(template, 'outcomes'):
-                for outcome in template.outcomes:
-                    self.add_outcome_entry(outcome)
+                # Only load outcomes if the UI frame exists (tab has been created)
+                if hasattr(self, 'outcome_entries_frame'):
+                    for outcome in template.outcomes:
+                        self.add_outcome_entry(outcome)
                 
             # Schedule
             if hasattr(template, 'schedule') and template.schedule:
@@ -267,18 +258,30 @@ class HistorySyllabusGenerator(UITabsMixin, DocumentGenerationMixin, DocumentPre
                 self.support_text.delete("1.0", tk.END)
                 self.support_text.insert("1.0", template.support_policy)
             
-            # Load late policy text content - make it behave like other policy fields
-            if hasattr(template, 'late_policy_text') and hasattr(self, 'late_policy_text'):
-                self.late_policy_text.delete("1.0", tk.END)
-                self.late_policy_text.insert("1.0", template.late_policy_text)
-            
-            # Load extra credit policy text content - make it behave like other policy fields  
-            if hasattr(template, 'extra_credit_policy_text') and hasattr(self, 'extra_credit_text'):
-                self.extra_credit_text.delete("1.0", tk.END)
-                self.extra_credit_text.insert("1.0", template.extra_credit_policy_text)
-                    
-            # Policy dropdowns and boolean variables
+            # Policy dropdowns and boolean variables (set first to avoid trace conflicts)
             self._set_policy_dropdowns(template)
+            
+            # IMPORTANT: Only load custom policy text if it exists in template
+            # If no custom text, preserve the existing default text in the UI
+            if hasattr(template, 'late_policy_text') and hasattr(self, 'late_policy_text'):
+                def set_late_policy_text():
+                    self.late_policy_text.config(state='normal')
+                    self.late_policy_text.delete("1.0", tk.END)
+                    self.late_policy_text.insert("1.0", template.late_policy_text)
+                    print(f"DEBUG: Loaded late policy text: {template.late_policy_text[:50]}...")
+                self.root.after(10, set_late_policy_text)  # Delay 10ms
+            else:
+                print("DEBUG: No custom late policy text in template, preserving default UI text")
+            
+            if hasattr(template, 'extra_credit_policy_text') and hasattr(self, 'extra_credit_text'):
+                def set_extra_credit_text():
+                    self.extra_credit_text.config(state='normal') 
+                    self.extra_credit_text.delete("1.0", tk.END)
+                    self.extra_credit_text.insert("1.0", template.extra_credit_policy_text)
+                    print(f"DEBUG: Loaded extra credit text: {template.extra_credit_policy_text[:50]}...")
+                self.root.after(10, set_extra_credit_text)  # Delay 10ms
+            else:
+                print("DEBUG: No custom extra credit text in template, preserving default UI text")
             
         except Exception as e:
             print(f"Error loading template: {e}")
@@ -623,10 +626,6 @@ class HistorySyllabusGenerator(UITabsMixin, DocumentGenerationMixin, DocumentPre
         """Add a new Section entry"""
         self.add_ta_entry()
 
-    def generate_pdf_command(self):
-        """Command wrapper for PDF generation"""
-        self.generate_syllabus("pdf")
-
     def run(self):
         """Start the application main loop"""
         self.root.mainloop()
@@ -746,8 +745,7 @@ class HistorySyllabusGenerator(UITabsMixin, DocumentGenerationMixin, DocumentPre
                 for policy_name, policy_var in self.optional_policies.items():
                     content["optional_policies"][policy_name] = policy_var.get()
 
-            content["optional_policies"]["assessment"] = self.assessment_policy_var.get() if hasattr(self, 'assessment_policy_var') else True
-            content["optional_policies"]["extensions"] = self.extensions_policy_var.get() if hasattr(self, 'extensions_policy_var') else True
+            # Keep only the instructor-specific policy options
             content["optional_policies"]["outside_support"] = self.outside_support_var.get() if hasattr(self, 'outside_support_var') else True
             content["optional_policies"]["show_gen_ed"] = self.show_gen_ed.get() if hasattr(self, 'show_gen_ed') else True
 
@@ -957,18 +955,8 @@ class HistorySyllabusGenerator(UITabsMixin, DocumentGenerationMixin, DocumentPre
             # Set optional policy boolean variables if they exist in the template
             if hasattr(template, 'optional_policies') and template.optional_policies:
                 for policy_name, value in template.optional_policies.items():
-                    # Map the template policy names to our boolean variables
-                    if policy_name == 'in_class_recording' and hasattr(self, 'in_class_recording_var'):
-                        self.in_class_recording_var.set(value)
-                    elif policy_name == 'conflict_resolution' and hasattr(self, 'conflict_resolution_var'):
-                        self.conflict_resolution_var.set(value)
-                    elif policy_name == 'campus_resources' and hasattr(self, 'campus_resources_var'):
-                        self.campus_resources_var.set(value)
-                    elif policy_name == 'academic_resources' and hasattr(self, 'academic_resources_var'):
-                        self.academic_resources_var.set(value)
-                    elif policy_name == 'late_work' and hasattr(self, 'late_work_var'):
-                        self.late_work_var.set(value)
-                    elif policy_name == 'late_submissions' and hasattr(self, 'late_submissions_policy_var'):
+                    # Map the template policy names to our boolean variables (only instructor-specific ones)
+                    if policy_name == 'late_submissions' and hasattr(self, 'late_submissions_policy_var'):
                         self.late_submissions_policy_var.set(value)
                     elif policy_name == 'extra_credit' and hasattr(self, 'extra_credit_policy_var'):
                         self.extra_credit_policy_var.set(value)
@@ -978,10 +966,6 @@ class HistorySyllabusGenerator(UITabsMixin, DocumentGenerationMixin, DocumentPre
                         self.technology_policy_var.set(value)
                     elif policy_name == 'communication' and hasattr(self, 'communication_policy_var'):
                         self.communication_policy_var.set(value)
-                    elif policy_name == 'assessment' and hasattr(self, 'assessment_policy_var'):
-                        self.assessment_policy_var.set(value)
-                    elif policy_name == 'extensions' and hasattr(self, 'extensions_policy_var'):
-                        self.extensions_policy_var.set(value)
                     elif policy_name == 'outside_support' and hasattr(self, 'outside_support_var'):
                         self.outside_support_var.set(value)
                     elif policy_name == 'show_gen_ed' and hasattr(self, 'show_gen_ed'):
@@ -1013,18 +997,21 @@ class HistorySyllabusGenerator(UITabsMixin, DocumentGenerationMixin, DocumentPre
 
     def import_schedule(self):
         """Import schedule from file"""
-        # This method can be implemented later if needed
-        pass
+        # Delegate to the UI tabs implementation
+        if hasattr(self, 'import_schedule') and hasattr(UITabsMixin, 'import_schedule'):
+            UITabsMixin.import_schedule(self)
 
     def export_schedule(self):
         """Export schedule to file"""
-        # This method can be implemented later if needed
-        pass
+        # Delegate to the UI tabs implementation  
+        if hasattr(self, 'export_schedule') and hasattr(UITabsMixin, 'export_schedule'):
+            UITabsMixin.export_schedule(self)
 
     def export_schedule_example(self):
         """Export an example schedule"""
-        # This method can be implemented later if needed
-        pass
+        # Delegate to the UI tabs implementation
+        if hasattr(self, 'export_schedule_example') and hasattr(UITabsMixin, 'export_schedule_example'):
+            UITabsMixin.export_schedule_example(self)
 
 if __name__ == "__main__":
     app = HistorySyllabusGenerator()

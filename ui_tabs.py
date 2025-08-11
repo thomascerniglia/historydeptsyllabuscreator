@@ -797,26 +797,37 @@ class UITabsMixin:
         
         frame = self.create_scrollable_frame(tab)
         
-        # University Assessment Policies
-        self.assessment_policy_var = tk.BooleanVar(value=True) # Default to True
-        assessment_check = ttk.Checkbutton(
-            frame,
-            text="University Assessment Policies",
-            variable=self.assessment_policy_var,
-            command=self.update_document_preview
-        )
-        assessment_check.pack(anchor="w", padx=20, pady=2)
+        # Add information header
+        info_frame = ttk.LabelFrame(frame, text="Policy Information")
+        info_frame.pack(fill=tk.X, padx=20, pady=10)
         
-        # Extensions & Make-Up Exams
-        self.extensions_policy_var = tk.BooleanVar(value=True) # Default to True
-        extensions_check = ttk.Checkbutton(
-            frame,
-            text="Extensions & Make-Up Exams",
-            variable=self.extensions_policy_var,
-            command=self.update_document_preview
+        info_label = ttk.Label(
+            info_frame,
+            text="All necessary UF academic policies, including University Assessment Policies, \nEvaluations, Recording Policy, Campus Resources, and Academic Resources \nwill be automatically included via the UF Policy Link below.",
+            font=('Arial', 10),
+            foreground='blue'
         )
-        extensions_check.pack(anchor="w", padx=20, pady=2)
+        info_label.pack(padx=10, pady=10)
         
+        # UF Policies Section - Always enabled by default
+        uf_policies_frame = ttk.LabelFrame(frame, text="UF Academic Policies")
+        uf_policies_frame.pack(fill=tk.X, padx=20, pady=5)
+        
+        # Set this to always be enabled
+        self.use_simplified_policies_var.set(True)
+        
+        uf_policy_label = ttk.Label(
+            uf_policies_frame,
+            text="✓ UF Academic Policies (automatically included)",
+            font=('Arial', 10, 'bold'),
+            foreground='green'
+        )
+        uf_policy_label.pack(anchor="w", padx=10, pady=5)
+        
+        ttk.Label(uf_policies_frame, 
+                 text="This includes all required UF policies via link: https://syllabus.ufl.edu/syllabus-policy/uf-syllabus-policy-links/", 
+                 style="Italic.TLabel").pack(anchor="w", padx=20, pady=(0, 10))
+
         # Canvas Policy checkbox (move above the Canvas Policy entry box)
         canvas_check = ttk.Checkbutton(
             frame,
@@ -896,42 +907,6 @@ class UITabsMixin:
         self.support_text.pack(fill=tk.X, padx=5, pady=5)
         self.support_text.insert("1.0", assignment_support_default)
         self.add_mousewheel_scrolling(self.support_text)
-        
-        # Fixed policies (non-editable) -> Now optional checkboxes
-        checkbox_in_class_recording = ttk.Checkbutton(
-            frame,
-            text="In-class recording policy",
-            variable=self.in_class_recording_var,
-            command=self.update_document_preview
-        )
-        checkbox_in_class_recording.pack(anchor="w", padx=5, pady=2)
-
-        # Optional: Procedure for Conflict Resolution
-        checkbox_conflict_resolution = ttk.Checkbutton(
-            frame,
-            text="Procedure for Conflict Resolution",
-            variable=self.conflict_resolution_var,
-            command=self.update_document_preview
-        )
-        checkbox_conflict_resolution.pack(anchor="w", padx=5, pady=2)
-
-        # Optional: Campus Resources
-        checkbox_campus_resources = ttk.Checkbutton(
-            frame,
-            text="Campus Resources",
-            variable=self.campus_resources_var,
-            command=self.update_document_preview
-        )
-        checkbox_campus_resources.pack(anchor="w", padx=5, pady=2)
-
-        # Optional: Academic Resources
-        checkbox_academic_resources = ttk.Checkbutton(
-            frame,
-            text="Academic Resources",
-            variable=self.academic_resources_var,
-            command=self.update_document_preview
-        )
-        checkbox_academic_resources.pack(anchor="w", padx=5, pady=2)
 
         # Add separator for new section
         ttk.Separator(frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=10)
@@ -953,25 +928,8 @@ class UITabsMixin:
                  text="\"All non-whole number grades .5 and above will be rounded up (example: 89.5 → 90)\"", 
                  style="Italic.TLabel").pack(anchor="w", padx=20, pady=(0, 5))
         
-        # Add separator for policy options
+        # Add separator for new section
         ttk.Separator(frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=10)
-        
-        # UF Policies Section
-        uf_policies_frame = ttk.LabelFrame(frame, text="UF Policy Options")
-        uf_policies_frame.pack(fill=tk.X, padx=20, pady=5)
-        
-        # Simplified UF policies option
-        simplified_policies_check = ttk.Checkbutton(
-            uf_policies_frame,
-            text="Use simplified UF policies (recommended for most courses)",
-            variable=self.use_simplified_policies_var,
-            command=self.update_document_preview
-        )
-        simplified_policies_check.pack(anchor="w", padx=5, pady=2)
-        
-        ttk.Label(uf_policies_frame, 
-                 text="This replaces multiple policy sections with a single link to UF's policy page", 
-                 style="Italic.TLabel").pack(anchor="w", padx=20, pady=(0, 5))
 
         # --- Move Late Submissions Policy Section here ---
         # Late Submissions Policy checkbox (above the late_frame)
@@ -988,11 +946,13 @@ class UITabsMixin:
         ttk.Label(late_frame, text="Late Submissions Policy:").pack(side=tk.LEFT, padx=(0, 5))
         
         self.late_policy_var = tk.StringVar()
+        # Default late policy text that should be used for Custom option
+        default_late_text = "Late assignments will be penalized 10% per day late unless prior arrangements have been made with the instructor due to documented emergency or illness. Contact instructor as soon as possible if you anticipate being unable to meet a deadline."
         self.late_policies = {
             "Standard (10% per day)": "Unless an extension is granted, assignments will incur a 10-point penalty for every day they are late.",
             "No late work": "No late work will be accepted without prior approval.",
             "48-hour grace": "Students have a 48-hour grace period for submissions, after which no late work will be accepted.",
-            "Custom": ""
+            "Custom": default_late_text  # Use the default text instead of empty string
         }
         self.late_combo = ttk.Combobox(late_frame, 
                                       textvariable=self.late_policy_var,
@@ -1003,8 +963,7 @@ class UITabsMixin:
         
         self.late_policy_text = scrolledtext.ScrolledText(late_frame, width=60, height=3, wrap=tk.WORD)
         self.late_policy_text.pack(fill=tk.X, padx=5, pady=(0, 5))
-        # Initialize with template policy text
-        default_late_text = "Late assignments will be penalized 10% per day late unless prior arrangements have been made with the instructor due to documented emergency or illness. Contact instructor as soon as possible if you anticipate being unable to meet a deadline."
+        # Initialize with the default policy text (same as Custom option)
         self.late_policy_text.insert('1.0', default_late_text)
         
         def update_late_policy(*args):
@@ -1043,11 +1002,13 @@ class UITabsMixin:
         ttk.Label(extra_frame, text="Extra Credit Policy:").pack(side=tk.LEFT, padx=(0, 5))
         
         self.extra_credit_var = tk.StringVar()
+        # Default extra credit text that should be used for Custom option
+        default_extra_credit_text = "Extra credit opportunities may be available at the instructor's discretion. These will be announced in class and posted on Canvas when available."
         self.extra_credit_policies = {
             "Standard": "Extra credit opportunities may be announced during the semester. Points will be added to your mid-term exam grade.",
             "No extra credit": "No extra credit will be offered in this course.",
             "Optional assignments": "Students may complete optional assignments for extra credit, worth up to 3% of the final grade.",
-            "Custom": ""
+            "Custom": default_extra_credit_text  # Use the default text instead of empty string
         }
         self.extra_combo = ttk.Combobox(extra_frame, textvariable=self.extra_credit_var,
                                         values=list(self.extra_credit_policies.keys()), width=30)
@@ -1056,8 +1017,7 @@ class UITabsMixin:
         
         self.extra_credit_text = scrolledtext.ScrolledText(extra_frame, width=60, height=3, wrap=tk.WORD)
         self.extra_credit_text.pack(fill=tk.X, padx=5, pady=(0, 5))
-        # Initialize with template policy text
-        default_extra_credit_text = "Extra credit opportunities may be available at the instructor's discretion. These will be announced in class and posted on Canvas when available."
+        # Initialize with the default extra credit text (same as Custom option)
         self.extra_credit_text.insert('1.0', default_extra_credit_text)
         
         def update_extra_credit(*args):
@@ -1089,13 +1049,6 @@ class UITabsMixin:
             command=lambda: self.generate_syllabus(export_format="docx")
         )
         gen_syllabus_btn.pack(side=tk.RIGHT, padx=5)
-
-        # Generate PDF button
-        gen_pdf_btn = ttk.Button(
-            self.action_frame, text="Generate Syllabus (PDF)", style="Action.TButton",
-            command=lambda: self.generate_syllabus(export_format="pdf")
-        )
-        gen_pdf_btn.pack(side=tk.RIGHT, padx=5)
         
         # Optional: Add save/load project buttons on the left side
         project_frame = ttk.Frame(self.action_frame)
